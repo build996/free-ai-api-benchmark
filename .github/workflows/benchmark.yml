@@ -1,0 +1,45 @@
+name: AI API Benchmark
+# 手动触发(免费 US runner,直连所有 provider,公平稳定)。也可解开下面的定时。
+on:
+  workflow_dispatch:
+    inputs:
+      providers:
+        description: "只测哪几家(空=所有有 key 的),空格分隔,如 groq gemini"
+        required: false
+        default: ""
+  # schedule:
+  #   - cron: "0 6 * * 1"   # 每周一 06:00 UTC 自动跑一次
+
+jobs:
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run benchmark
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          SAMBANOVA_API_KEY: ${{ secrets.SAMBANOVA_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+          GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: python automation/ai_api_benchmark.py ${{ github.event.inputs.providers }}
+      - name: Upload raw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: ai_benchmark_results.json
+      - name: Summary to job log
+        if: always()
+        run: |
+          echo '## AI API Benchmark (US runner)' >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          cat ai_benchmark_results.json >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo 'no results' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
