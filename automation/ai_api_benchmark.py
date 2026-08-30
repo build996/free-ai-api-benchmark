@@ -56,7 +56,26 @@ PROVIDERS = {
     "mistral":   {"base": "https://api.mistral.ai/v1",                        "model": "mistral-small-latest",    "key_env": "MISTRAL_API_KEY"},
     "glm":       {"base": "https://open.bigmodel.cn/api/paas/v4",             "model": "glm-4-flash",             "key_env": "GLM_API_KEY"},
     "xai":       {"base": "https://api.x.ai/v1",                              "model": "grok-2-latest",           "key_env": "XAI_API_KEY"},
-    "nvidia":    {"base": "https://integrate.api.nvidia.com/v1",              "model": "meta/llama-3.3-70b-instruct", "key_env": "NVIDIA_API_KEY"},
+    "nvidia":    {"base": "https://integrate.api.nvidia.com/v1",              "model": "nvidia/llama-3.1-nemotron-70b-instruct", "key_env": "NVIDIA_API_KEY"},  # meta/llama-3.3 已 EOL(2026-08-26)
+}
+
+# 同模型跨平台"对决":一个开源模型 → 各平台上它的 model id(命名各不同)。
+# 只测有 key 的平台。id 需逐平台核实(有的可能已更名/下架,跑出来会报错就换)。
+SHOOTOUTS = {
+    # gpt-oss-120b —— Groq 和 SambaNova 都托管完全相同的这个模型,现有 key 即可跑
+    "gpt-oss-120b": {
+        "groq":       "openai/gpt-oss-120b",   # 已核实
+        "sambanova":  "gpt-oss-120b",          # 已核实(SambaNova 上就叫这个)
+        "together":   "openai/gpt-oss-120b",   # 待核实
+        "openrouter": "openai/gpt-oss-120b",   # 待核实
+    },
+    # DeepSeek V4 —— NVIDIA/DeepSeek直连/Together 有 V4(SambaNova 只有 V3.x,不算同款)
+    "deepseek-v4": {
+        "nvidia":     "deepseek-ai/deepseek-v4-flash-0731",  # 已核实
+        "deepseek":   "deepseek-chat",                        # DeepSeek 直连(V4 Flash)
+        "together":   "deepseek-ai/DeepSeek-V4-Flash",        # 待核实
+        "openrouter": "deepseek/deepseek-chat",               # 待核实
+    },
 }
 
 DEFAULT_PROMPT = ("Explain how an HTTP request/response cycle works, and what status "
@@ -140,11 +159,11 @@ def _request(url, key, model, prompt, stream):
     return ttft, time.perf_counter() - t0, "".join(text), usage, chunks
 
 
-def bench_one(name, cfg, prompt):
+def bench_one(name, cfg, prompt, model=None):
     key = os.environ.get(cfg["key_env"], "").strip()
     if not key:
         return {"provider": name, "skipped": f"no {cfg['key_env']}"}
-    model = model_for(name, cfg)
+    model = model or model_for(name, cfg)
     url = cfg["base"].rstrip("/") + "/chat/completions"
 
     streamed = True
@@ -182,6 +201,7 @@ def main():
     ap.add_argument("providers", nargs="*", help="只测这几家(默认:所有有 key 的)")
     ap.add_argument("--prompt", default=DEFAULT_PROMPT)
     ap.add_argument("--list", action="store_true", help="列出所有 provider 和需要的 key 名")
+    ap.add_argument("--shootout", help="同模型跨平台对决,如 deepseek-v4")
     args = ap.parse_args()
 
     if args.list:
@@ -195,15 +215,23 @@ def main():
     proxy = setup_proxy()
     if proxy:
         print(f"(走代理 {proxy} —— 所有家统一线路)\n")
-    targets = args.providers or list(PROVIDERS)
-    unknown = [t for t in targets if t not in PROVIDERS]
-    if unknown:
-        sys.exit(f"未知 provider: {unknown}。用 --list 看全部。")
+    if args.shootout:
+        so = SHOOTOUTS.get(args.shootout)
+        if not so:
+            sys.exit(f"未知 shootout: {args.shootout}。有:{list(SHOOTOUTS)}")
+        pairs = [(p, m) for p, m in so.items() if p in PROVIDERS]
+        print(f"=== 对决:{args.shootout}(同模型跨平台,只测有 key 的)===")
+    else:
+        targets = args.providers or list(PROVIDERS)
+        unknown = [t for t in targets if t not in PROVIDERS]
+        if unknown:
+            sys.exit(f"未知 provider: {unknown}。用 --list 看全部。")
+        pairs = [(t, None) for t in targets]
 
     print(f"prompt: {args.prompt}\n")
     results = []
-    for name in targets:
-        r = bench_one(name, PROVIDERS[name], args.prompt)
+    for name, model in pairs:
+        r = bench_one(name, PROVIDERS[name], args.prompt, model=model)
         results.append(r)
         if r.get("skipped"):
             print(f"  {name:<10} 跳过({r['skipped']})")
