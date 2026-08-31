@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -64,13 +65,11 @@ jobs:
           export DEEPSEEK_BASE_URL="${{ github.event.inputs.base_url }}"
           export DSH_MODEL="${{ github.event.inputs.model }}"
           echo "backend: $DEEPSEEK_BASE_URL  model: $DSH_MODEL"
+          echo "=== 已装 SDK 的真实签名(pip 版可能比仓库示例旧)==="
+          python -c "import inspect;from deepseek_harness import DeepSeekHarness as H;print('DeepSeekHarness:',inspect.signature(H.__init__))" 2>&1 | tee /tmp/sig.txt || true
           START=$(date +%s)
           set +e
-          timeout 900 python python/sdk/examples/minimal.py \
-            --workspace /tmp/ws \
-            --dsh-home /tmp/dsh-home \
-            --session-id bench-$(date +%s) \
-            "${{ github.event.inputs.task }}" 2>&1 | tee /tmp/agent-out.txt
+          timeout 900 python $GITHUB_WORKSPACE/automation/run_dsh_agent.py "${{ github.event.inputs.task }}" 2>&1 | tee /tmp/agent-out.txt
           RC=$?
           set -e
           END=$(date +%s)
