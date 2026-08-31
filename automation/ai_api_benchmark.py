@@ -82,8 +82,7 @@ PROVIDER_MODELS = {
         "minimaxai/minimax-m3",                    # MiniMax
         "google/gemma-4-31b-it",                   # Google 开源
         "mistralai/mistral-nemotron",              # Mistral×NVIDIA
-        "meta/llama-3.1-nemotron-70b-instruct",    # Meta 系(经 NVIDIA 调优)
-        "microsoft/phi-3.5-moe-instruct",          # 微软小模型
+        # 已实测下架(404,2026-08-31):meta/llama-3.1-nemotron-70b-instruct、microsoft/phi-3.5-moe-instruct
     ],
     "openrouter": ["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-31b-it:free",
                    "minimax/minimax-m3:free", "z-ai/glm-5.2:free"],
@@ -183,7 +182,7 @@ def _request(url, key, model, prompt, stream):
 
     t0 = time.perf_counter()
     ttft, chunks, text, usage = None, 0, [], None
-    with urllib.request.urlopen(req, timeout=90) as resp:
+    with urllib.request.urlopen(req, timeout=180) as resp:  # NVIDIA 大模型冷启动可能很慢
         if stream:
             for raw in resp:
                 line = raw.decode("utf-8", "replace").strip()
@@ -233,16 +232,26 @@ def bench_one(name, cfg, prompt, model=None):
             return {"provider": name, "model": model, "error": f"{type(e).__name__}: {e}"}
 
     out_tokens = (usage or {}).get("completion_tokens") or max(chunks, len(out) // 4)
+    if out_tokens == 0 or not out.strip():
+        return {"provider": name, "model": model,
+                "error": "empty response (no tokens returned)"}
+
     # 流式:剔除首包延迟算生成速度;非流式:只能端到端(含 prefill,口径略保守)
     gen_time = (total - ttft) if (streamed and ttft and total > ttft) else total
+    # 有些端点"伪流式":憋很久再一次性吐完,gen_time 趋近 0 会算出荒谬的速度。
+    # 少于 3 个数据块 或 gen_time < 0.2s 视为非真流式,退回端到端口径。
+    buffered = streamed and (chunks < 3 or gen_time < 0.2)
+    if buffered:
+        gen_time = total
     gen_tps = out_tokens / gen_time if gen_time > 0 else 0
     return {
         "provider": name, "model": model,
-        "ttft_s": round(ttft, 3) if (streamed and ttft) else None,
+        "ttft_s": round(ttft, 3) if (streamed and ttft and not buffered) else None,
         "total_s": round(total, 3),
         "out_tokens": out_tokens,
         "tokens_from_usage": bool(usage),
-        "streamed": streamed,
+        "streamed": streamed and not buffered,
+        "buffered": buffered,
         "gen_tokens_per_s": round(gen_tps, 1),
         "output": out.strip(),
     }
@@ -262,7 +271,11 @@ def run_capability(spec):
         for task in CAPABILITY_TASKS:
             r = bench_one(prov, PROVIDERS[prov], task["prompt"], model=m)
             if r.get("error") or r.get("skipped"):
-                ok, note = False, (r.get("error") or r.get("skipped"))[:60]
+                # 没跑成 ≠ 能力不行:记成 None(未测),别冤枉模型
+                row[task["id"]] = None
+                row[task["id"] + "_out"] = (r.get("error") or r.get("skipped"))[:80]
+                marks.append(f"{task['id']}:⚠️")
+                continue
             else:
                 try:
                     ok = bool(task["check"](r.get("output", "")))
@@ -272,18 +285,23 @@ def run_capability(spec):
             row[task["id"]] = ok
             row[task["id"] + "_out"] = note
             marks.append(f"{task['id']}:{'✅' if ok else '❌'}")
-        passed = sum(1 for t in CAPABILITY_TASKS if row.get(t["id"]))
-        row["passed"] = passed
+        passed = sum(1 for t in CAPABILITY_TASKS if row.get(t["id"]) is True)
+        tested = sum(1 for t in CAPABILITY_TASKS if row.get(t["id"]) is not None)
+        row["passed"], row["tested"] = passed, tested
         table.append(row)
-        print(f"  {m[-34:]:<34} {' '.join(marks)}  ({passed}/{len(CAPABILITY_TASKS)})")
+        print(f"  {m[-34:]:<34} {' '.join(marks)}  ({passed}/{tested} 已测)")
 
     print("\n=== Markdown 表(可直接贴文章)===\n")
     print("| 模型 | 结构化 JSON | 写代码 | 中文 | 长上下文 | 通过 |")
     print("|---|---|---|---|---|---|")
     for r in table:
-        c = lambda k: "✅" if r.get(k) else "❌"  # noqa: E731
-        print(f"| `{r['model']}` | {c('json')} | {c('code')} | {c('chinese')} | {c('needle')} | {r['passed']}/4 |")
+        def c(k, r=r):
+            v = r.get(k)
+            return "✅" if v is True else ("❌" if v is False else "⚠️")
+        score = f"{r['passed']}/{r['tested']}" if r["tested"] else "未测通"
+        print(f"| `{r['model']}` | {c('json')} | {c('code')} | {c('chinese')} | {c('needle')} | {score} |")
     print("\n任务:①只输出合法 JSON(指令遵循)②写可用的 Python 函数 ③纯中文回答 ④从 120 行噪声里找出指定值。")
+    print("⚠️ = 请求没跑成(超时/报错),不代表模型能力不行。")
     OUT.with_name("ai_capability_results.json").write_text(
         json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"原始输出已存:ai_capability_results.json")
