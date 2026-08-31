@@ -12,18 +12,22 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 
 ### Generation throughput
 
+<!-- BENCHMARK_TABLE_START -->
+*Last run: 2026-08-31 (UTC), from a US GitHub Actions runner.*
+
 | Provider | Model | tokens/s |
 |---|---|---|
-| **Groq** | `openai/gpt-oss-120b` | **~525** |
-| Groq | `qwen/qwen3.8-27b` | ~498 |
-| Groq | `groq/compound-mini` | ~498 |
-| NVIDIA | `moonshotai/kimi-k3` | 62.4 |
-| NVIDIA | `google/gemma-4-31b-it` | 50.9 |
-| OpenRouter | `nvidia/nemotron-3-super-120b:free` | 45.7 |
-| NVIDIA | `mistralai/mistral-nemotron` | 34.4 |
-| NVIDIA | `deepseek-ai/deepseek-v4-flash-0731` | 27.3 |
+| groq | `openai/gpt-oss-120b` | **565.9** |
+| groq | `groq/compound-mini` | **523.2** |
+| groq | `qwen/qwen3.6-27b` | **517.1** |
+| groq | `qwen/qwen3.8-27b` | **461.3** |
 
-Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs — the ranking is stable, the absolute numbers are a band.
+Excluded as implausible (buffered responses inflate throughput):
+
+- groq / `openai/gpt-oss-20b` — measured 2209.0 tok/s
+<!-- BENCHMARK_TABLE_END -->
+
+This table is regenerated automatically by the weekly run — see [`results/`](results/) for every dated snapshot. Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs; the ranking is stable, the absolute numbers are a band.
 
 ### Which free tiers still exist
 

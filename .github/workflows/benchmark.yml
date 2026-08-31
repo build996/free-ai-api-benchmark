@@ -1,5 +1,5 @@
 name: AI API Benchmark
-# 手动触发(免费 US runner,直连所有 provider,公平稳定)。也可解开下面的定时。
+# 手动触发,或每周一自动跑。结果会 commit 进 results/ 形成历史记录。
 on:
   workflow_dispatch:
     inputs:
@@ -7,8 +7,11 @@ on:
         description: "只测哪几家(空=所有有 key 的),空格分隔,如 groq gemini"
         required: false
         default: ""
-  # schedule:
-  #   - cron: "0 6 * * 1"   # 每周一 06:00 UTC 自动跑一次
+  schedule:
+    - cron: "0 6 * * 1"   # 每周一 06:00 UTC
+
+permissions:
+  contents: write
 
 jobs:
   bench:
@@ -18,6 +21,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Run benchmark
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -30,12 +34,32 @@ jobs:
           GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
           GH_MODELS_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: python automation/ai_api_benchmark.py ${{ github.event.inputs.providers }}
+
+      - name: Archive dated result + refresh README table
+        if: always()
+        run: |
+          python automation/record_results.py || echo "record step skipped"
+
+      - name: Commit history
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/ README.md 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "Benchmark run $(date -u +%Y-%m-%d): archive results, refresh README"
+            git push
+          fi
+
       - name: Upload raw results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: ai_benchmark_results.json
+
       - name: Summary to job log
         if: always()
         run: |
