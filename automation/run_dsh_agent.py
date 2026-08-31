@@ -31,21 +31,40 @@ def main():
     prompt = sys.argv[1]
 
     params = set(inspect.signature(DeepSeekHarness.__init__).parameters)
-    print("SDK accepts:", sorted(p for p in params if p != "self"))
+    print("DeepSeekHarness accepts:", sorted(p for p in params if p != "self"))
 
-    candidates = [
-        ("provider", os.environ.get("DSH_PROVIDER", "deepseek-official")),
-        ("model", os.environ.get("DSH_MODEL", "deepseek-v4-flash")),
-        ("cwd", WORKSPACE),
-        ("workspace", WORKSPACE),
-        ("dsh_home", HOME),
-        ("home", HOME),
-        ("profile", "sdk-minimal"),
-    ]
-    kw = {k: v for k, v in candidates if k in params}
-    print("passing:", sorted(kw))
+    wanted = {
+        "provider": os.environ.get("DSH_PROVIDER", "deepseek-official"),
+        "model": os.environ.get("DSH_MODEL", "deepseek-v4-flash"),
+        "cwd": WORKSPACE,
+        "workspace": WORKSPACE,
+        "dsh_home": HOME,
+        "home": HOME,
+        "profile": "sdk-minimal",
+    }
 
-    with DeepSeekHarness(**kw) as h:
+    if "config" in params:
+        # 这个 SDK 版本只吃一个 config 对象
+        import deepseek_harness as dh
+        cfg_cls = None
+        for attr in dir(dh):
+            if "Config" in attr:
+                cfg_cls = getattr(dh, attr)
+                print("found config class:", attr)
+                break
+        if cfg_cls is None:
+            sys.exit("SDK wants config= but exports no Config class")
+        cfg_params = set(inspect.signature(cfg_cls.__init__).parameters)
+        print("Config accepts:", sorted(p for p in cfg_params if p != "self"))
+        cfg_kw = {k: v for k, v in wanted.items() if k in cfg_params}
+        print("passing to Config:", sorted(cfg_kw))
+        harness = DeepSeekHarness(config=cfg_cls(**cfg_kw))
+    else:
+        kw = {k: v for k, v in wanted.items() if k in params}
+        print("passing:", sorted(kw))
+        harness = DeepSeekHarness(**kw)
+
+    with harness as h:
         result = h.run(prompt, session_id="bench-run")
     print("FINAL RESPONSE:")
     print(getattr(result, "final_response", result))
