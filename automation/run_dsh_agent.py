@@ -36,8 +36,12 @@ def main():
     wanted = {
         "provider": os.environ.get("DSH_PROVIDER", "deepseek-official"),
         "model": os.environ.get("DSH_MODEL", "deepseek-v4-flash"),
+        # 显式传 key/base_url —— 别指望它一定会读环境变量
+        "api_key": os.environ.get("DEEPSEEK_API_KEY", ""),
+        "base_url": os.environ.get("DEEPSEEK_BASE_URL", ""),
         "cwd": WORKSPACE,
         "workspace": WORKSPACE,
+        "session_root": HOME,
         "dsh_home": HOME,
         "home": HOME,
         "profile": "sdk-minimal",
@@ -66,8 +70,12 @@ def main():
 
     with harness as h:
         result = h.run(prompt, session_id="bench-run")
+    final = getattr(result, "final_response", result)
     print("FINAL RESPONSE:")
-    print(getattr(result, "final_response", result))
+    print(final)
+    if not str(final).strip():
+        print("WARNING: empty final response — the agent likely never ran "
+              "(check api_key/base_url/provider wiring, not model capability)")
 
 
 if __name__ == "__main__":
