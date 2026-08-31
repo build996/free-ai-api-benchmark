@@ -1,0 +1,102 @@
+name: DSH Agent Test
+
+# 用 DeepSeek Harness (dsh) 当测试台:同一个 agent 任务,换不同免费模型当后端,
+# 看谁真能在 agent 循环里把活干完(工具调用/多步任务),而不只是吐字快。
+# 跑在 GitHub Actions 一次性容器里 —— 符合 dsh SAFETY.md 的"用一次性环境"要求。
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "OpenAI 兼容端点(如 https://integrate.api.nvidia.com/v1)"
+        required: true
+        default: "https://integrate.api.nvidia.com/v1"
+      model:
+        description: "模型 id(如 deepseek-ai/deepseek-v4-flash-0731)"
+        required: true
+        default: "deepseek-ai/deepseek-v4-flash-0731"
+      key_name:
+        description: "用哪个 secret 当 key:NVIDIA / GROQ / OPENROUTER"
+        required: true
+        default: "NVIDIA"
+      task:
+        description: "给 agent 的任务"
+        required: false
+        default: "Create a file called result.txt containing the number of .md files in the workspace, then read it back and tell me the number."
+
+jobs:
+  agent-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Clone dsh + install SDK
+        run: |
+          git clone --depth 1 https://github.com/deepseek-ai/deepseek-harness.git dsh
+          cd dsh
+          python -m pip install --quiet --upgrade pip
+          python -m pip install --quiet deepseek-harness-sdk
+          echo "SDK installed"
+
+      - name: Prepare disposable workspace
+        run: |
+          mkdir -p /tmp/ws /tmp/dsh-home
+          # 放几个文件让任务有东西可数(可验证的正确答案 = 3)
+          printf 'alpha\n' > /tmp/ws/a.md
+          printf 'beta\n'  > /tmp/ws/b.md
+          printf 'gamma\n' > /tmp/ws/c.md
+          printf 'not markdown\n' > /tmp/ws/d.txt
+          ls -la /tmp/ws
+
+      - name: Run agent task
+        id: run
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          cd dsh
+          KEY_VAR="${{ github.event.inputs.key_name }}_API_KEY"
+          export DEEPSEEK_API_KEY="${!KEY_VAR}"
+          export DEEPSEEK_BASE_URL="${{ github.event.inputs.base_url }}"
+          export DSH_MODEL="${{ github.event.inputs.model }}"
+          echo "backend: $DEEPSEEK_BASE_URL  model: $DSH_MODEL"
+          START=$(date +%s)
+          set +e
+          timeout 900 python python/sdk/examples/minimal.py \
+            --workspace /tmp/ws \
+            --dsh-home /tmp/dsh-home \
+            --session-id bench-$(date +%s) \
+            "${{ github.event.inputs.task }}" 2>&1 | tee /tmp/agent-out.txt
+          RC=$?
+          set -e
+          END=$(date +%s)
+          echo "---- elapsed: $((END-START))s, exit: $RC ----"
+
+      - name: Inspect result and session log
+        if: always()
+        run: |
+          echo "=== 任务是否真的完成(result.txt 应存在且含 3)==="
+          if [ -f /tmp/ws/result.txt ]; then
+            echo "result.txt EXISTS:"; cat /tmp/ws/result.txt
+            grep -q "3" /tmp/ws/result.txt && echo "VERDICT: PASS (correct count)" || echo "VERDICT: FAIL (wrong number)"
+          else
+            echo "result.txt MISSING"; echo "VERDICT: FAIL (agent did not create the file)"
+          fi
+          echo "=== 会话日志统计(工具调用次数)==="
+          find /tmp/dsh-home/sessions -name "*.jsonl" 2>/dev/null | head -3 | while read f; do
+            echo "-- $f: $(wc -l < "$f") 行"
+            grep -o '"tool[^"]*"' "$f" 2>/dev/null | sort | uniq -c | sort -rn | head -8
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dsh-session-${{ github.event.inputs.key_name }}
+          path: |
+            /tmp/agent-out.txt
+            /tmp/dsh-home/sessions
+          if-no-files-found: warn
