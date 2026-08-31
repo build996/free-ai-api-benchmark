@@ -46,34 +46,27 @@ except Exception:
 # key_env: 读哪个环境变量;model_env: 覆盖模型的环境变量名。
 PROVIDERS = {
     "groq":      {"base": "https://api.groq.com/openai/v1",                    "model": "openai/gpt-oss-120b",     "key_env": "GROQ_API_KEY"},  # Llama 3.3 已下架(实测 2026-08-29)
-    "cerebras":  {"base": "https://api.cerebras.ai/v1",                        "model": "llama-3.3-70b",           "key_env": "CEREBRAS_API_KEY"},
     "gemini":    {"base": "https://generativelanguage.googleapis.com/v1beta/openai", "model": "gemini-3.6-flash",  "key_env": "GEMINI_API_KEY"},  # 2.0/2.5 已退役(实测 2026-08-30)
     "deepseek":  {"base": "https://api.deepseek.com/v1",                       "model": "deepseek-chat",           "key_env": "DEEPSEEK_API_KEY"},
-    "sambanova": {"base": "https://api.sambanova.ai/v1",                       "model": "Meta-Llama-3.3-70B-Instruct", "key_env": "SAMBANOVA_API_KEY"},
-    "together":  {"base": "https://api.together.xyz/v1",                       "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free", "key_env": "TOGETHER_API_KEY"},
     "openrouter":{"base": "https://openrouter.ai/api/v1",                      "model": "meta-llama/llama-3.3-70b-instruct:free", "key_env": "OPENROUTER_API_KEY"},
     "github":    {"base": "https://models.inference.ai.azure.com",            "model": "gpt-4o-mini",             "key_env": "GH_MODELS_TOKEN"},  # GITHUB_TOKEN 是 Actions 保留名,换个
     "mistral":   {"base": "https://api.mistral.ai/v1",                        "model": "mistral-small-latest",    "key_env": "MISTRAL_API_KEY"},
     "glm":       {"base": "https://open.bigmodel.cn/api/paas/v4",             "model": "glm-4-flash",             "key_env": "GLM_API_KEY"},
-    "xai":       {"base": "https://api.x.ai/v1",                              "model": "grok-2-latest",           "key_env": "XAI_API_KEY"},
     "nvidia":    {"base": "https://integrate.api.nvidia.com/v1",              "model": "nvidia/llama-3.1-nemotron-70b-instruct", "key_env": "NVIDIA_API_KEY"},  # meta/llama-3.3 已 EOL(2026-08-26)
 }
 
 # 同模型跨平台"对决":一个开源模型 → 各平台上它的 model id(命名各不同)。
 # 只测有 key 的平台。id 需逐平台核实(有的可能已更名/下架,跑出来会报错就换)。
 SHOOTOUTS = {
-    # gpt-oss-120b —— Groq 和 SambaNova 都托管完全相同的这个模型,现有 key 即可跑
+    # gpt-oss-120b —— Groq 和 OpenRouter 都托管同一个模型(免卡的还剩这俩)
     "gpt-oss-120b": {
         "groq":       "openai/gpt-oss-120b",   # 已核实
-        "sambanova":  "gpt-oss-120b",          # 已核实(SambaNova 上就叫这个)
-        "together":   "openai/gpt-oss-120b",   # 待核实
         "openrouter": "openai/gpt-oss-120b",   # 待核实
     },
-    # DeepSeek V4 —— NVIDIA/DeepSeek直连/Together 有 V4(SambaNova 只有 V3.x,不算同款)
+    # DeepSeek V4 —— DeepSeek直连 / NVIDIA / OpenRouter(都免卡)
     "deepseek-v4": {
-        "nvidia":     "deepseek-ai/deepseek-v4-flash-0731",  # 已核实
         "deepseek":   "deepseek-chat",                        # DeepSeek 直连(V4 Flash)
-        "together":   "deepseek-ai/DeepSeek-V4-Flash",        # 待核实
+        "nvidia":     "deepseek-ai/deepseek-v4-flash-0731",  # 已核实
         "openrouter": "deepseek/deepseek-chat",               # 待核实
     },
 }
