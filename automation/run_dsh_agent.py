@@ -13,6 +13,7 @@ dsh 还是 developer preview,已发布的 pip SDK 和仓库示例可能对不上
 import inspect
 import os
 import sys
+from pathlib import Path
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -25,16 +26,47 @@ WORKSPACE = os.environ.get("DSH_WORKSPACE", "/tmp/ws")
 HOME = os.environ.get("DSH_HOME", "/tmp/dsh-home")
 
 
+def write_custom_provider_settings():
+    """按官方 providers.md 的格式,把任意 OpenAI 兼容端点注册成自定义 provider。
+
+    dsh 不是靠 Config 里的 base_url 路由的,而是读 $DSH_HOME/settings.yaml。
+    """
+    base_url = os.environ.get("DEEPSEEK_BASE_URL", "").strip()
+    model = os.environ.get("DSH_MODEL", "").strip()
+    if not base_url or not model:
+        return None
+    pid = "benchgw"
+    home = Path(HOME)
+    home.mkdir(parents=True, exist_ok=True)
+    settings = f"""llm-pi-ai:
+  providers:
+    {pid}:
+      apiKeyEnv: BENCH_API_KEY
+      api: openai-completions
+      baseURL: {base_url}
+      models:
+        - id: {model}
+"""
+    (home / "settings.yaml").write_text(settings, encoding="utf-8")
+    # 供 apiKeyEnv 引用
+    os.environ["BENCH_API_KEY"] = os.environ.get("DEEPSEEK_API_KEY", "")
+    print(f"registered custom provider '{pid}' -> {base_url} ({model})")
+    print(settings)
+    return pid
+
+
 def main():
     if len(sys.argv) < 2:
         sys.exit("need a task prompt")
     prompt = sys.argv[1]
+    custom_pid = write_custom_provider_settings()
 
     params = set(inspect.signature(DeepSeekHarness.__init__).parameters)
     print("DeepSeekHarness accepts:", sorted(p for p in params if p != "self"))
 
     wanted = {
-        "provider": os.environ.get("DSH_PROVIDER", "deepseek-official"),
+        # 用上面注册的自定义 provider id;没注册成功才退回 deepseek-official
+        "provider": custom_pid or os.environ.get("DSH_PROVIDER", "deepseek-official"),
         "model": os.environ.get("DSH_MODEL", "deepseek-v4-flash"),
         # 显式传 key/base_url —— 别指望它一定会读环境变量
         "api_key": os.environ.get("DEEPSEEK_API_KEY", ""),
