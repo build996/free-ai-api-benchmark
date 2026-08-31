@@ -48,8 +48,8 @@ PROVIDERS = {
     "groq":      {"base": "https://api.groq.com/openai/v1",                    "model": "openai/gpt-oss-120b",     "key_env": "GROQ_API_KEY"},  # Llama 3.3 已下架(实测 2026-08-29)
     "gemini":    {"base": "https://generativelanguage.googleapis.com/v1beta/openai", "model": "gemini-3.6-flash",  "key_env": "GEMINI_API_KEY"},  # 2.0/2.5 已退役(实测 2026-08-30)
     "deepseek":  {"base": "https://api.deepseek.com/v1",                       "model": "deepseek-chat",           "key_env": "DEEPSEEK_API_KEY"},
-    "openrouter":{"base": "https://openrouter.ai/api/v1",                      "model": "google/gemma-4-31b-it:free", "key_env": "OPENROUTER_API_KEY"},  # llama:free 已转付费(实测 2026-08-31)
-    "github":    {"base": "https://models.inference.ai.azure.com",            "model": "gpt-4o-mini",             "key_env": "GH_MODELS_TOKEN"},  # GITHUB_TOKEN 是 Actions 保留名,换个
+    "openrouter":{"base": "https://openrouter.ai/api/v1",                      "model": "nvidia/nemotron-3-super-120b-a12b:free", "key_env": "OPENROUTER_API_KEY"},  # gemma:free 常 429,换 nemotron(实测 2026-08-31)
+    "github":    {"base": "https://models.github.ai/inference",              "model": "openai/gpt-4o-mini",      "key_env": "GH_MODELS_TOKEN"},  # 旧 azure endpoint 已失效,换 models.github.ai(2026-08-31)
     "mistral":   {"base": "https://api.mistral.ai/v1",                        "model": "mistral-small-latest",    "key_env": "MISTRAL_API_KEY"},
     "glm":       {"base": "https://open.bigmodel.cn/api/paas/v4",             "model": "glm-4-flash",             "key_env": "GLM_API_KEY"},
     "nvidia":    {"base": "https://integrate.api.nvidia.com/v1",              "model": "nvidia/nemotron-3-super-120b-a12b", "key_env": "NVIDIA_API_KEY"},  # nemotron-70b 账号无权限;super-120b 实测可用(2026-08-31)
