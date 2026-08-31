@@ -2,26 +2,26 @@
   {
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "ttft_s": 0.375,
-    "total_s": 1.372,
-    "out_tokens": 525,
+    "ttft_s": 0.444,
+    "total_s": 1.829,
+    "out_tokens": 617,
     "tokens_from_usage": true,
     "streamed": true,
     "buffered": false,
-    "gen_tokens_per_s": 526.7,
-    "output": "**The HTTP request/response cycle**\n\n1. **Client initiates a request** – A web browser (or any HTTP‑capable client) builds an HTTP request line (e.g., `GET /index.html HTTP/1.1`), adds required headers (Host, User‑Agent, Accept, etc.), and optionally a body (for POST, PUT, etc.). The client then opens a TCP connection to the server’s IP address on port 80 (or 443 for HTTPS) and sends the request bytes.\n\n2. **Server receives and processes** – The web server (Apache, Nginx, IIS, etc.) parses the request line and headers, determines which resource is being asked for, and may invoke application logic (PHP, Node, Python, etc.). It may also consult caches, authentication modules, or rewrite rules.\n\n3. **Server builds a response** – After processing, the server creates a status line (`HTTP/1.1 200 OK`), adds response headers (Content‑Type, Content‑Length, Set‑Cookie, etc.), and optionally a message body containing HTML, JSON, an image, etc. The response is written back over the same TCP connection.\n\n4. **Client receives the response** – The browser reads the status code, headers, and body. Based on the status and content‑type it renders a page, follows redirects, shows an error page, or runs client‑side scripts. The connection may be closed or kept alive for further requests (HTTP keep‑alive).\n\n5. **Optional subsequent requests** – The client may request additional resources (CSS, JS, images) referenced in the first response, repeating the cycle.\n\n**Key status codes**\n\n- **200 OK** – The request succeeded; the server is returning the requested representation (e.g., an HTML page). This is the normal “everything worked” response.\n\n- **404 Not Found** – The server could not locate the requested resource. It indicates that the URL is invalid or the file has been moved/deleted. Browsers typically display a “Page not found” error page.\n\n- **500 Internal Server Error** – The server encountered an unexpected condition that prevented it from fulfilling the request. It signals a problem in server‑side code, configuration, or infrastructure rather than a client mistake."
+    "gen_tokens_per_s": 445.4,
+    "output": "**The HTTP request/response cycle in a nutshell (≈250 words)**  \n\n1. **Client initiates a request** – A web browser (or any HTTP‑capable client) builds an HTTP request line, e.g. `GET /index.html HTTP/1.1`, adds required headers (Host, User‑Agent, Accept, etc.), and optionally a body (for POST, PUT, etc.). The client opens a TCP connection to the server’s IP address on port 80 (or 443 for TLS) and sends this data.\n\n2. **Server receives and parses** – The web server (Apache, Nginx, IIS, etc.) reads the request from the socket, parses the method, URI, protocol version, and headers. It maps the URI to a resource: a static file, a script, or a route handled by an application framework.\n\n3. **Application processing** – If the request maps to dynamic code (PHP, Node, Python, etc.), the server hands the request to that code. The application may query databases, perform business logic, and decide what response to generate.\n\n4. **Server builds a response** – The server creates a status line (`HTTP/1.1 200 OK`), adds response headers (Content‑Type, Content‑Length, Cache‑Control, etc.), and optionally a body (HTML, JSON, an image, etc.). The response is written back over the same TCP connection.\n\n5. **Client receives the response** – The browser reads the status line and headers, decides what to do (render HTML, follow redirects, display an error page), and may request additional resources (CSS, JS, images) that start new cycles.\n\n6. **Connection handling** – HTTP/1.1 defaults to keep‑alive, allowing multiple request/response pairs over one TCP socket. HTTP/2 multiplexes many streams over a single connection; HTTP/3 uses QUIC/UDP.\n\n---\n\n### Meaning of common status codes  \n\n| Code | Name | What it signals |\n|------|------|-----------------|\n| **200** | **OK** | The request succeeded; the server is returning the requested representation (e.g., an HTML page, JSON data). |\n| **404** | **Not Found** | The server could not locate a resource matching the request URI. The client’s URL is likely wrong or the resource has been removed. |\n| **500** | **Internal Server Error** | The server encountered an unexpected condition that prevented it from fulfilling the request. It’s a generic “something went wrong on the server side.” |\n\nThese codes are part of the 3‑digit HTTP status‑code taxonomy, where the first digit groups responses (2xx success, 4xx client error, 5xx server error)."
   },
   {
     "provider": "gemini",
     "model": "gemini-3.6-flash",
-    "ttft_s": 34.465,
-    "total_s": 37.211,
-    "out_tokens": 387,
+    "ttft_s": 4.682,
+    "total_s": 6.603,
+    "out_tokens": 363,
     "tokens_from_usage": true,
     "streamed": true,
     "buffered": false,
-    "gen_tokens_per_s": 141.0,
-    "output": "The **HTTP (Hypertext Transfer Protocol) request/response cycle** is the foundational process for data exchange on the web, functioning as a standardized conversation between a client (such as a web browser) and a web server.\n\n### The Request/Response Cycle\n\n1. **The Request:** The cycle begins when a user clicks a link, submits a form, or types a URL. The client sends an **HTTP Request** to the server. This request contains:\n   * **URL/URI:** The address of the desired resource.\n   * **Method:** The intended action, such as `GET` (retrieve data) or `POST` (send data).\n   * **Headers:** Metadata like browser type and accepted data formats.\n   * **Body:** Optional data sent to the server (common in `POST` requests).\n\n2. **Processing:** The server receives the request, processes the application logic, and queries databases if necessary.\n\n3. **The Response:** The server sends back an **HTTP Response** containing metadata, the requested content (like HTML, CSS, or JSON), and a **Status Code**.\n\n### Common HTTP Status Codes\n\nStatus codes are 3-digit numbers grouped by category that inform the client about the outcome of their request:\n\n* **200 OK:** **Success.** The request was successfully received, understood, and processed. The server returns the requested data (e.g., loading a web page).\n* **404 Not Found:** **Client Error.** The server is reachable, but the specific resource (file, page, or API endpoint) requested does not exist. This often happens due to broken links or typos in the URL.\n* **500 Internal Server Error:** **Server Error.** The request reached the server, but an unexpected condition or software crash on the server's end prevented it from fulfilling the request."
+    "gen_tokens_per_s": 189.0,
+    "output": "The HTTP (Hypertext Transfer Protocol) request/response cycle is the core communication framework of the web, allowing clients (like web browsers) and servers to exchange data.\n\n**How the Cycle Works:**\n\n1. **Initiation:** A user clicks a link or enters a URL in their browser.\n2. **Request:** The client creates and sends an HTTP request to the target server. This request includes a **method** (specifying the action, such as `GET` to retrieve data or `POST` to send data), a **path** (the specific URL), **headers** (metadata like browser type), and an optional **body** (data being sent).\n3. **Processing:** The server receives the request, processes the logic, and may query a database to fetch or update information.\n4. **Response:** The server sends an HTTP response back to the client. This package contains metadata, a **status code**, and the requested payload (such as HTML, images, or JSON data).\n5. **Rendering:** The client receives the response and renders the content for the user.\n\n**Key Status Codes:**\n\nStatus codes are three-digit numbers returned in the response header that indicate the request's outcome:\n\n* **200 OK:** Represents success. The server understood and successfully processed the request, returning the expected data.\n* **404 Not Found:** Indicates a client-side error. The server cannot locate the requested resource, typically because the URL was typed incorrectly or the page has been moved/deleted.\n* **500 Internal Server Error:** Indicates a server-side error. The server encountered an unexpected failure—such as a bug in the code or a database connection failure—that prevented it from completing the request."
   },
   {
     "provider": "deepseek",
@@ -30,14 +30,7 @@
   {
     "provider": "openrouter",
     "model": "nvidia/nemotron-3-super-120b-a12b:free",
-    "ttft_s": 2.56,
-    "total_s": 13.593,
-    "out_tokens": 420,
-    "tokens_from_usage": true,
-    "streamed": true,
-    "buffered": false,
-    "gen_tokens_per_s": 38.1,
-    "output": "An HTTP request/response cycle begins when a client (usually a web browser or API consumer) opens a TCP connection to a server and sends an HTTP request message. The request consists of three parts: a start line (e.g., `GET /index.html HTTP/1.1`), a set of header fields (such as `Host`, `User‑Agent`, `Accept`, and optional cookies), and an optional body (used for methods like POST or PUT). The server receives the request, parses it, determines which resource or application logic should handle it, performs any needed processing (reading a file, querying a database, executing code), and then builds an HTTP response.\n\nThe response mirrors the request’s structure: a status line (`HTTP/1.1 200 OK`), response headers (content type, length, caching directives, etc.), and an optional body containing the requested data (HTML, JSON, image bytes, etc.). After sending the response, the server may close the connection or keep it alive for further requests, depending on the `Connection` header and protocol version.\n\n**Common status codes**\n\n- **200 OK** – The request succeeded; the server has processed it and returned the expected representation in the response body.\n- **404 Not Found** – The server could not locate a resource matching the request URI. This often indicates a mistyped URL or a removed page.\n- **500 Internal Server Error** – A generic server‑side failure occurred while fulfilling the request (e.g., unhandled exception, database crash). The client knows the problem is on the server, not in its request."
+    "error": "empty response (no tokens returned)"
   },
   {
     "provider": "github",
@@ -47,37 +40,30 @@
   {
     "provider": "mistral",
     "model": "mistral-small-latest",
-    "ttft_s": 0.434,
-    "total_s": 3.363,
-    "out_tokens": 488,
-    "tokens_from_usage": true,
-    "streamed": true,
-    "buffered": false,
-    "gen_tokens_per_s": 166.6,
-    "output": "### **HTTP Request/Response Cycle**\nThe **HTTP (Hypertext Transfer Protocol)** request/response cycle is the foundation of data communication on the web. Here’s how it works:\n\n1. **Client Sends a Request**\n   - A client (e.g., a web browser) initiates communication by sending an **HTTP request** to a server.\n   - The request includes:\n     - **Method** (e.g., `GET`, `POST`, `PUT`, `DELETE`) – defines the action.\n     - **URL (Uniform Resource Locator)** – specifies the resource (e.g., `/home`).\n     - **Headers** – provide metadata (e.g., `User-Agent`, `Accept`).\n     - **Body (optional)** – contains data (e.g., form submissions in `POST`).\n\n2. **Server Processes the Request**\n   - The server receives the request, interprets it, and performs the requested action (e.g., fetching a webpage, processing data).\n\n3. **Server Sends a Response**\n   - The server replies with an **HTTP response**, which includes:\n     - **Status Code** (e.g., `200 OK`, `404 Not Found`) – indicates the result.\n     - **Headers** – provide additional info (e.g., `Content-Type`, `Cache-Control`).\n     - **Body (optional)** – contains the requested data (e.g., HTML, JSON).\n\n4. **Client Receives the Response**\n   - The client (browser) processes the response and displays the result (e.g., renders a webpage).\n\n---\n\n### **Common HTTP Status Codes**\n1. **`200 OK`**\n   - **Meaning:** The request succeeded.\n   - **Use Case:** Standard response for successful `GET` or `POST` requests (e.g., loading a webpage).\n\n2. **`404 Not Found`**\n   - **Meaning:** The requested resource doesn’t exist.\n   - **Use Case:** When a user tries to access a broken link or non-existent page.\n\n3. **`500 Internal Server Error`**\n   - **Meaning:** The server encountered an unexpected error.\n   - **Use Case:** Server-side issues (e.g., buggy code, database failure) preventing request processing.\n\nThese codes help clients and servers communicate the outcome of a request efficiently."
+    "error": "HTTP 503: {\"object\":\"error\",\"message\":\"Service temporarily unavailable due to high load, please retry.\",\"type\":\"internal_server_error\",\"param\":null,\"code\":\"3505\",\"raw_status_code\":503}"
   },
   {
     "provider": "glm",
     "model": "glm-4-flash",
-    "ttft_s": 2.557,
-    "total_s": 17.326,
-    "out_tokens": 298,
+    "ttft_s": 1.086,
+    "total_s": 15.934,
+    "out_tokens": 226,
     "tokens_from_usage": true,
     "streamed": true,
     "buffered": false,
-    "gen_tokens_per_s": 20.2,
-    "output": "The HTTP request/response cycle is the fundamental interaction between a client (like a web browser) and a server. It typically involves the following steps:\n\n1. **Client sends a request**: The client initiates the cycle by sending an HTTP request to the server. This request includes a method (like GET or POST), the URL of the resource, and headers that may include information like the user agent or cookies.\n\n2. **Server processes the request**: The server receives the request and processes it. This may involve retrieving the requested resource, performing authentication, or executing a script.\n\n3. **Server sends a response**: After processing the request, the server sends an HTTP response back to the client. This response includes a status code, headers, and the requested resource (if applicable).\n\n4. **Client receives the response**: The client receives the response and may use the resource or display it to the user.\n\nStatus codes are a part of the response and indicate the result of the request:\n\n- **200 OK**: This status code means the request was successful, and the server returned the requested resource. It's the most common successful response.\n\n- **404 Not Found**: This indicates that the server cannot find the requested resource. It's typically used when a URL is incorrect or the resource has been deleted.\n\n- **500 Internal Server Error**: This status code signifies that the server encountered an unexpected condition that prevented it from fulfilling the request. It's a catch-all for server errors."
+    "gen_tokens_per_s": 15.2,
+    "output": "An HTTP request/response cycle is the fundamental interaction between a client (like a web browser) and a server. It begins when the client sends an HTTP request to the server, specifying the method (GET, POST, etc.), the URL, and any additional headers or data. The server processes this request and sends back an HTTP response.\n\nThe request consists of a request line, headers, and an optional body. The response includes a status line with a status code, headers, and a body. The status code indicates the result of the request. \n\n- **200 OK**: This status code means the request was successful, and the server returned the requested data.\n- **404 Not Found**: It indicates that the server could not find the requested resource. This often occurs when a user tries to access a non-existent page.\n- **500 Internal Server Error**: This signifies that the server encountered an unexpected condition that prevented it from fulfilling the request. It's a catch-all for server errors.\n\nThe cycle ends when the client receives the response and processes it accordingly, such as displaying the requested content or showing an error message."
   },
   {
     "provider": "nvidia",
     "model": "nvidia/nemotron-3-super-120b-a12b",
-    "ttft_s": 3.462,
-    "total_s": 18.337,
-    "out_tokens": 495,
+    "ttft_s": 2.406,
+    "total_s": 16.047,
+    "out_tokens": 514,
     "tokens_from_usage": true,
     "streamed": true,
     "buffered": false,
-    "gen_tokens_per_s": 33.3,
-    "output": "An HTTP request/response cycle begins when a client (usually a web browser or API consumer) opens a TCP connection to a server and sends an HTTP request message. The request consists of three parts:\n\n1. **Start line** – `METHOD SP REQUEST‑URI SP HTTP/VERSION\\r\\n` (e.g., `GET /index.html HTTP/1.1`).  \n2. **Headers** – Key‑value pairs that convey metadata such as `Host`, `User‑Agent`, `Accept`, cookies, or content length.  \n3. **Optional body** – Present for methods like POST or PUT, carrying form data, JSON, file uploads, etc.\n\nThe server receives the request, parses it, and determines which resource or application logic should handle it. After processing, the server builds an HTTP response:\n\n1. **Status line** – `HTTP/VERSION SP STATUS‑CODE SP REASON‑PHRASE\\r\\n` (e.g., `HTTP/1.1 200 OK`).  \n2. **Headers** – Response metadata like `Content-Type`, `Content-Length`, `Set‑Cookie`, caching directives.  \n3. **Body** – The actual payload (HTML, JSON, image, error message) or empty if the status code indicates no content.\n\nThe client reads the response, interprets the status code to decide whether the request succeeded, and processes the body accordingly before possibly closing or reusing the connection.\n\n**Common status codes**\n\n- **200 OK** – The request succeeded; the server returned the requested representation in the response body.  \n- **404 Not Found** – The server could not locate a resource matching the request‑URI. This often indicates a mistyped URL or a removed/moved page.  \n- **500 Internal Server Error** – A generic server‑side failure occurred while fulfilling the request (e.g., unhandled exception, database crash). The client knows the problem is on the server, not in its request."
+    "gen_tokens_per_s": 37.7,
+    "output": "An HTTP request/response cycle begins when a client (usually a web browser or API consumer) opens a TCP connection to a server and sends an HTTP request message. The request consists of three parts:\n\n1. **Start line** – the method (GET, POST, etc.), the target URL, and the HTTP version (e.g., `GET /index.html HTTP/1.1`).  \n2. **Headers** – key‑value pairs that convey metadata such as `Host`, `User‑Agent`, `Content-Type`, and any cookies.  \n3. **Optional body** – present for methods like POST or PUT, carrying form data, JSON, or file uploads.\n\nThe server receives the request, parses it, and determines which resource or application logic should handle it. After processing, the server builds an HTTP response:\n\n1. **Status line** – the HTTP version, a three‑digit status code, and a brief reason phrase (e.g., `HTTP/1.1 200 OK`).  \n2. **Headers** – response metadata like `Content-Type`, `Content-Length`, `Set‑Cookie`, and caching directives.  \n3. **Body** – the actual payload (HTML, JSON, image, error message, etc.) unless the response is headless (e.g., a 204 No Content).\n\nThe client reads the response, renders or processes the body, and may close or reuse the TCP connection depending on the `Connection` header and HTTP version.\n\n**Common status codes**\n\n- **200 OK** – The request succeeded; the server returned the requested representation in the body.  \n- **404 Not Found** – The server could not locate any resource matching the request target. This often indicates a mistyped URL or a removed endpoint.  \n- **500 Internal Server Error** – A generic server‑side failure occurred while fulfilling the request (e.g., unhandled exception, misconfiguration). The client knows the problem lies with the server, not the request itself."
   }
 ]
