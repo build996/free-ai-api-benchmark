@@ -100,8 +100,20 @@ def main():
         print("passing:", sorted(kw))
         harness = DeepSeekHarness(**kw)
 
-    with harness as h:
-        result = h.run(prompt, session_id="bench-run")
+    import traceback
+    try:
+        with harness as h:
+            result = h.run(prompt, session_id="bench-run")
+            print("run() returned type:", type(result).__name__)
+            print("run() attrs:", [a for a in dir(result) if not a.startswith("_")][:20])
+    except Exception:
+        print("=== EXCEPTION during agent run ===")
+        traceback.print_exc()
+        # 把会话日志也吐出来,看它到底走到哪一步
+        for log in Path(HOME).rglob("*.jsonl"):
+            print(f"--- {log} ---")
+            print(log.read_text(encoding="utf-8", errors="replace")[:2000])
+        raise
     final = getattr(result, "final_response", result)
     print("FINAL RESPONSE:")
     print(final)

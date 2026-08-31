@@ -19,10 +19,14 @@ on:
         description: "用哪个 secret 当 key:NVIDIA / GROQ / OPENROUTER"
         required: true
         default: "NVIDIA"
-      task:
-        description: "给 agent 的任务"
-        required: false
-        default: "Create a file called result.txt containing the number of .md files in the workspace, then read it back and tell me the number."
+      difficulty:
+        description: "easy=数文件(验证连通) / hard=修 bug(真正区分模型)"
+        required: true
+        default: "hard"
+        type: choice
+        options:
+          - easy
+          - hard
 
 jobs:
   agent-test:
@@ -45,11 +49,28 @@ jobs:
       - name: Prepare disposable workspace
         run: |
           mkdir -p /tmp/ws /tmp/dsh-home
-          # 放几个文件让任务有东西可数(可验证的正确答案 = 3)
+          # easy 任务:数 .md 文件(正确答案 = 3)
           printf 'alpha\n' > /tmp/ws/a.md
           printf 'beta\n'  > /tmp/ws/b.md
           printf 'gamma\n' > /tmp/ws/c.md
           printf 'not markdown\n' > /tmp/ws/d.txt
+          # hard 任务:一个跑起来会崩的脚本,agent 必须真读 traceback 才能修对。
+          # 埋了两个 bug:变量名拼错(tota/total),以及空列表除零。
+          cat > /tmp/ws/stats.py <<'PYFILE'
+          def average_of_positives(nums):
+              positives = [n for n in nums if n > 0]
+              tota = sum(positives)
+              return total / len(positives)
+
+
+          if __name__ == "__main__":
+              print("avg:", average_of_positives([1, 2, 3, 4]))
+              print("avg empty:", average_of_positives([-1, -2]))
+          PYFILE
+          # heredoc 缩进会带进文件,去掉行首 10 个空格
+          sed -i 's/^          //' /tmp/ws/stats.py
+          echo "--- stats.py (should crash) ---"; cat /tmp/ws/stats.py
+          python /tmp/ws/stats.py 2>&1 | tail -3 || true
           ls -la /tmp/ws
 
       - name: Run agent task
@@ -67,9 +88,15 @@ jobs:
           echo "backend: $DEEPSEEK_BASE_URL  model: $DSH_MODEL"
           echo "=== 已装 SDK 的真实签名(pip 版可能比仓库示例旧)==="
           python -c "import inspect;from deepseek_harness import DeepSeekHarness as H;print('DeepSeekHarness:',inspect.signature(H.__init__))" 2>&1 | tee /tmp/sig.txt || true
+          if [ "${{ github.event.inputs.difficulty }}" = "easy" ]; then
+            TASK="Create a file called result.txt containing the number of .md files in the workspace, then read it back and tell me the number."
+          else
+            TASK="The script stats.py in this directory crashes when you run it. Run it, read the error, fix the bugs in stats.py, and run it again until it completes successfully and prints both averages. Handle the empty-list case sensibly instead of crashing."
+          fi
+          echo "TASK: $TASK"
           START=$(date +%s)
           set +e
-          timeout 900 python $GITHUB_WORKSPACE/automation/run_dsh_agent.py "${{ github.event.inputs.task }}" 2>&1 | tee /tmp/agent-out.txt
+          timeout 900 python $GITHUB_WORKSPACE/automation/run_dsh_agent.py "$TASK" 2>&1 | tee /tmp/agent-out.txt
           RC=$?
           set -e
           END=$(date +%s)
@@ -78,12 +105,27 @@ jobs:
       - name: Inspect result and session log
         if: always()
         run: |
-          echo "=== 任务是否真的完成(result.txt 应存在且含 3)==="
-          if [ -f /tmp/ws/result.txt ]; then
-            echo "result.txt EXISTS:"; cat /tmp/ws/result.txt
-            grep -q "3" /tmp/ws/result.txt && echo "VERDICT: PASS (correct count)" || echo "VERDICT: FAIL (wrong number)"
+          if [ "${{ github.event.inputs.difficulty }}" = "easy" ]; then
+            echo "=== easy:result.txt 应存在且含 3 ==="
+            if [ -f /tmp/ws/result.txt ]; then
+              echo "result.txt EXISTS:"; cat /tmp/ws/result.txt
+              grep -q "3" /tmp/ws/result.txt && echo "VERDICT: PASS (correct count)" || echo "VERDICT: FAIL (wrong number)"
+            else
+              echo "result.txt MISSING"; echo "VERDICT: FAIL (agent did not create the file)"
+            fi
           else
-            echo "result.txt MISSING"; echo "VERDICT: FAIL (agent did not create the file)"
+            echo "=== hard:stats.py 应能跑通且两行都输出 ==="
+            echo "--- 修改后的 stats.py ---"; cat /tmp/ws/stats.py
+            echo "--- 实际运行 ---"
+            OUT=$(python /tmp/ws/stats.py 2>&1); RC2=$?
+            echo "$OUT"
+            if [ $RC2 -ne 0 ]; then
+              echo "VERDICT: FAIL (still crashes)"
+            elif echo "$OUT" | grep -q "avg: 2.5" && echo "$OUT" | grep -q "avg empty:"; then
+              echo "VERDICT: PASS (fixed both bugs, correct average, handles empty list)"
+            else
+              echo "VERDICT: PARTIAL (runs, but output not as expected)"
+            fi
           fi
           echo "=== 会话日志统计(工具调用次数)==="
           find /tmp/dsh-home/sessions -name "*.jsonl" 2>/dev/null | head -3 | while read f; do
