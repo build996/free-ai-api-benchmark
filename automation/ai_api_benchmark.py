@@ -68,6 +68,61 @@ SHOOTOUTS = {
 DEFAULT_PROMPT = ("Explain how an HTTP request/response cycle works, and what status "
                   "codes 200, 404, and 500 mean. Aim for about 250 words.")
 
+# 一个平台上值得逐个测的模型(--models <provider>)。只列免费档能调的。
+PROVIDER_MODELS = {
+    "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b",
+             "qwen/qwen3.6-27b", "groq/compound-mini"],
+    "nvidia": ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b",
+               "nvidia/nemotron-3.5-lightning-30b-a3b", "deepseek-ai/deepseek-v4-flash-0731",
+               "qwen/qwen3.8-27b"],
+    "openrouter": ["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-31b-it:free",
+                   "minimax/minimax-m3:free", "z-ai/glm-5.2:free"],
+}
+
+# 能力测试:每题给可判定的通过条件,报"通过/失败"而不是主观打分。
+CAPABILITY_TASKS = [
+    {
+        "id": "json",
+        "prompt": ('Return ONLY valid JSON, no markdown fence, no prose: '
+                   '{"language":"Python","year":1991,"typed":false}. '
+                   'Reply with exactly that object.'),
+        "check": lambda t: _json_ok(t),
+        "why": "指令遵循 / 结构化输出(能不能塞进代码管道)",
+    },
+    {
+        "id": "code",
+        "prompt": ("Write a Python function `is_palindrome(s)` that ignores case, spaces and "
+                   "punctuation. Output ONLY the code, no explanation."),
+        "check": lambda t: ("def is_palindrome" in t and "return" in t),
+        "why": "写代码(能不能直接用)",
+    },
+    {
+        "id": "chinese",
+        "prompt": "用一句话解释什么是 API 限流,只用中文回答,不要英文。",
+        "check": lambda t: (sum('一' <= c <= '鿿' for c in t) > 8),
+        "why": "中文能力(中文项目能不能用)",
+    },
+    {
+        "id": "needle",
+        "prompt": ("Here is a config dump:\n" + ("noise_line=0\n" * 60) +
+                   "SECRET_PORT=8471\n" + ("noise_line=1\n" * 60) +
+                   "\nWhat is the value of SECRET_PORT? Answer with the number only."),
+        "check": lambda t: "8471" in t,
+        "why": "长上下文找信息(RAG 场景)",
+    },
+]
+
+
+def _json_ok(text):
+    t = text.strip().strip("`")
+    if t.lower().startswith("json"):
+        t = t[4:].strip()
+    try:
+        d = json.loads(t)
+        return d.get("language") == "Python" and d.get("year") == 1991
+    except Exception:
+        return False
+
 
 def load_keys():
     for kf in KEYS_FILES:
@@ -183,12 +238,55 @@ def bench_one(name, cfg, prompt, model=None):
     }
 
 
+def run_capability(spec):
+    """能力测试:一个平台(或指定模型)跑 4 个可判定的任务,报通过/失败 + 真实输出。"""
+    prov, _, model = spec.partition(":")
+    if prov not in PROVIDERS:
+        sys.exit(f"未知 provider: {prov}")
+    models = [model] if model else PROVIDER_MODELS.get(prov, [PROVIDERS[prov]["model"]])
+    print(f"=== {prov} 能力测试(4 项固定任务,通过/失败可复现)===\n")
+    table = []
+    for m in models:
+        row = {"model": m}
+        marks = []
+        for task in CAPABILITY_TASKS:
+            r = bench_one(prov, PROVIDERS[prov], task["prompt"], model=m)
+            if r.get("error") or r.get("skipped"):
+                ok, note = False, (r.get("error") or r.get("skipped"))[:60]
+            else:
+                try:
+                    ok = bool(task["check"](r.get("output", "")))
+                except Exception:
+                    ok = False
+                note = (r.get("output", "") or "").strip().replace("\n", " ")[:70]
+            row[task["id"]] = ok
+            row[task["id"] + "_out"] = note
+            marks.append(f"{task['id']}:{'✅' if ok else '❌'}")
+        passed = sum(1 for t in CAPABILITY_TASKS if row.get(t["id"]))
+        row["passed"] = passed
+        table.append(row)
+        print(f"  {m[-34:]:<34} {' '.join(marks)}  ({passed}/{len(CAPABILITY_TASKS)})")
+
+    print("\n=== Markdown 表(可直接贴文章)===\n")
+    print("| 模型 | 结构化 JSON | 写代码 | 中文 | 长上下文 | 通过 |")
+    print("|---|---|---|---|---|---|")
+    for r in table:
+        c = lambda k: "✅" if r.get(k) else "❌"  # noqa: E731
+        print(f"| `{r['model']}` | {c('json')} | {c('code')} | {c('chinese')} | {c('needle')} | {r['passed']}/4 |")
+    print("\n任务:①只输出合法 JSON(指令遵循)②写可用的 Python 函数 ③纯中文回答 ④从 120 行噪声里找出指定值。")
+    OUT.with_name("ai_capability_results.json").write_text(
+        json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"原始输出已存:ai_capability_results.json")
+
+
 def main():
     ap = argparse.ArgumentParser(description="免费 AI API 实测 harness")
     ap.add_argument("providers", nargs="*", help="只测这几家(默认:所有有 key 的)")
     ap.add_argument("--prompt", default=DEFAULT_PROMPT)
     ap.add_argument("--list", action="store_true", help="列出所有 provider 和需要的 key 名")
-    ap.add_argument("--shootout", help="同模型跨平台对决,如 deepseek-v4")
+    ap.add_argument("--shootout", help="同模型跨平台对决,如 nemotron-super-120b")
+    ap.add_argument("--models", help="测一个平台内的多个模型,如 groq / nvidia / openrouter")
+    ap.add_argument("--capability", help="能力测试(JSON/代码/中文/长上下文),传 provider 或 provider:model")
     args = ap.parse_args()
 
     if args.list:
@@ -202,7 +300,17 @@ def main():
     proxy = setup_proxy()
     if proxy:
         print(f"(走代理 {proxy} —— 所有家统一线路)\n")
-    if args.shootout:
+    if args.capability:
+        run_capability(args.capability)
+        return
+
+    if args.models:
+        prov = args.models
+        if prov not in PROVIDER_MODELS:
+            sys.exit(f"没配置 {prov} 的模型列表。有:{list(PROVIDER_MODELS)}")
+        pairs = [(prov, m) for m in PROVIDER_MODELS[prov]]
+        print(f"=== {prov} 平台内多模型实测(每个模型跑同一 prompt)===")
+    elif args.shootout:
         so = SHOOTOUTS.get(args.shootout)
         if not so:
             sys.exit(f"未知 shootout: {args.shootout}。有:{list(SHOOTOUTS)}")
@@ -218,12 +326,16 @@ def main():
     print(f"prompt: {args.prompt}\n")
     results = []
     for name, model in pairs:
+        label = (model or name)[-34:] if args.models else name
         r = bench_one(name, PROVIDERS[name], args.prompt, model=model)
         results.append(r)
         if r.get("skipped"):
-            print(f"  {name:<10} 跳过({r['skipped']})")
+            print(f"  {label:<34} 跳过({r['skipped']})")
         elif r.get("error"):
-            print(f"  {name:<10} ❌ {r['error']}")
+            print(f"  {label:<34} ❌ {r['error'][:120]}")
+        elif args.models:
+            tag = "真实" if r.get("tokens_from_usage") else "估算"
+            print(f"  {label:<34} ✅ {r['out_tokens']} tok({tag}) · ~{r['gen_tokens_per_s']} tok/s")
         else:
             tag = "真实" if r.get("tokens_from_usage") else "估算"
             ttft_s = f"TTFT {r['ttft_s']}s" if r.get("ttft_s") else "非流式(无TTFT)"
