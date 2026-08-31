@@ -1,0 +1,27 @@
+name: Project Health
+# Recommending a tool that quietly stopped being maintained is a slow failure —
+# nothing errors, the advice just rots. This checks weekly.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"   # Mondays, after the benchmark run
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check tracked projects
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python automation/check_project_health.py | tee health.txt
+      - name: Summary
+        if: always()
+        run: |
+          echo '## Project health' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat health.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || true
+          echo '```' >> $GITHUB_STEP_SUMMARY

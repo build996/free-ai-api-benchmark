@@ -66,6 +66,22 @@ Two traps worth knowing:
 - **The model is gated behind manual terms acceptance.** A key that works for chat and Whisper returns `400 requires terms acceptance` for TTS until someone clicks through in the console — it cannot be done via the API, so it breaks automated setups.
 - **The WAV header reports `2147483647` frames** (int32 max, the placeholder for streamed audio of unknown length). Standard libraries then compute a duration of ~24.9 hours for a 10-second clip. Derive duration from file size instead: `(filesize - 44) / (channels * sampwidth) / framerate`.
 
+### Are the tools still maintained?
+
+Reviews rot in a quiet way: the tool stops being developed and the article keeps recommending it. A weekly job checks last commit, last release and the archived flag for every open-source project we cover.
+
+As of 2026-08-31, 15 of 16 are actively developed. The exception:
+
+| Project | Last commit | Last release | Open issues |
+|---|---|---|---|
+| `Aider-AI/aider` | **100 days** | **386 days** (v0.86.0) | 1,838 |
+
+A year without a release is a long time in AI tooling, where model names and APIs change monthly.
+
+```bash
+python automation/check_project_health.py --days 90
+```
+
 ### Can these models actually run an agent?
 
 Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), given real jobs (fix a broken script, tidy a folder, summarise CSVs) and graded by **inspecting the filesystem afterwards** — not by reading the model's own claim of success.
@@ -95,6 +111,7 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 - **Capability tasks**: code, JSON, long-context, Chinese.
 - **Speech-to-text**: realtime factor on a fixed public-domain recording (`automation/bench_transcribe.py`).
 - **Text-to-speech**: generation speed vs produced audio length, with the header caveat above.
+- **Project health**: last commit / release / archived state for the open-source tools we recommend (`automation/check_project_health.py`).
 - **Agent tasks** via DeepSeek Harness, graded on filesystem state.
 
 ## Run it yourself
