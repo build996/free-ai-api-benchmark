@@ -72,9 +72,19 @@ DEFAULT_PROMPT = ("Explain how an HTTP request/response cycle works, and what st
 PROVIDER_MODELS = {
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b",
              "qwen/qwen3.6-27b", "groq/compound-mini"],
-    "nvidia": ["nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3-nano-30b-a3b",
-               "nvidia/nemotron-3.5-lightning-30b-a3b", "deepseek-ai/deepseek-v4-flash-0731",
-               "qwen/qwen3.8-27b"],
+    # NVIDIA 托管 83 个模型,横跨各家厂商。挑代表性的:自家 nemotron 三档 + 各厂旗舰 + 小模型
+    "nvidia": [
+        "nvidia/nemotron-3-super-120b-a12b",      # 自家大模型
+        "nvidia/nemotron-3-nano-30b-a3b",          # 自家小模型
+        "nvidia/nemotron-3.5-lightning-30b-a3b",   # 自家主打速度
+        "deepseek-ai/deepseek-v4-flash-0731",      # DeepSeek 最新(直连已收费,这里还能白嫖)
+        "moonshotai/kimi-k3",                      # Kimi 最新
+        "minimaxai/minimax-m3",                    # MiniMax
+        "google/gemma-4-31b-it",                   # Google 开源
+        "mistralai/mistral-nemotron",              # Mistral×NVIDIA
+        "meta/llama-3.1-nemotron-70b-instruct",    # Meta 系(经 NVIDIA 调优)
+        "microsoft/phi-3.5-moe-instruct",          # 微软小模型
+    ],
     "openrouter": ["nvidia/nemotron-3-super-120b-a12b:free", "google/gemma-4-31b-it:free",
                    "minimax/minimax-m3:free", "z-ai/glm-5.2:free"],
 }
