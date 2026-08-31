@@ -1,17 +1,97 @@
 # Free AI API Benchmark
 
-Reproducible latency + throughput benchmark for the **free tiers** of popular AI APIs
-(Groq, Google Gemini, SambaNova, NVIDIA NIM, OpenRouter, Mistral, and more), run from a
-neutral **US GitHub Actions runner** so every provider is measured over the same route — a fair comparison.
+Reproducible benchmarks for the **free tiers** of the major AI APIs — measured from a neutral US GitHub Actions runner so every provider is tested over the same route.
+
+Unlike vendor marketing pages, everything here is measured. Unlike most benchmark repos, it also tests whether models can **actually complete tasks**, not just how fast they emit tokens.
 
 Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)**.
 
-## What it measures
-- **TTFT** (time to first token) and **generation throughput** (tokens/sec), computed from the API's own `usage` token counts.
-- Auto-falls back to non-streaming for providers whose SSE stream is blocked.
+---
 
-## Run it
-1. Add each provider's key as an **Actions secret** (`GROQ_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `SAMBANOVA_API_KEY`, `OPENROUTER_API_KEY`, `MISTRAL_API_KEY`, `TOGETHER_API_KEY`, `GLM_API_KEY`, `GH_MODELS_TOKEN`).
-2. Run the **AI API Benchmark** workflow (Actions tab → Run workflow). Results appear in the job summary + as an artifact.
+## Latest results (2026-08-31)
+
+### Generation throughput
+
+| Provider | Model | tokens/s |
+|---|---|---|
+| **Groq** | `openai/gpt-oss-120b` | **~525** |
+| Groq | `qwen/qwen3.8-27b` | ~498 |
+| Groq | `groq/compound-mini` | ~498 |
+| NVIDIA | `moonshotai/kimi-k3` | 62.4 |
+| NVIDIA | `google/gemma-4-31b-it` | 50.9 |
+| OpenRouter | `nvidia/nemotron-3-super-120b:free` | 45.7 |
+| NVIDIA | `mistralai/mistral-nemotron` | 34.4 |
+| NVIDIA | `deepseek-ai/deepseek-v4-flash-0731` | 27.3 |
+
+Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs — the ranking is stable, the absolute numbers are a band.
+
+### Which free tiers still exist
+
+| Provider | Status (Aug 2026) |
+|---|---|
+| Groq | ✅ Free, no card |
+| NVIDIA NIM | ✅ Free, no card, 83 models |
+| OpenRouter | ✅ Free tier, no card |
+| Google Gemini | ✅ Free, now defaults to reasoning models |
+| Mistral | ✅ Free tier |
+| **SambaNova** | ❌ `PAYMENT_METHOD_REQUIRED` — card now required |
+| **Together** | ❌ Read-only until you deposit |
+| **Cerebras** | ❌ Card required |
+
+### Can these models actually run an agent?
+
+Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), given real jobs (fix a broken script, tidy a folder, summarise CSVs) and graded by **inspecting the filesystem afterwards** — not by reading the model's own claim of success.
+
+| Model | Fix a two-bug script | Notes |
+|---|---|---|
+| Nemotron Super 120B | ✅ **43 s** | On a file task: reported success in 20 s having **moved zero files** |
+| Kimi K3 | ✅ 56 s | Most reliable overall; also summarised 3 CSVs correctly |
+| DeepSeek V4 Flash | ✅ 251 s | Slowest of the passes, despite "Flash" |
+| Gemma 4 31B | ❌ | Hung until the 900 s timeout |
+
+**Throughput does not predict agent performance.** Gemma 4 was second-fastest by tokens/s and never completed a task. Nemotron returned empty responses in the streaming benchmark and was the fastest agent. The two measure different things: typing speed vs decision quality.
+
+---
+
+## Gotchas worth knowing
+
+- **`meta/llama-3.3-70b-instruct` is gone from NVIDIA NIM.** Nearly every NIM tutorial online still opens with it. It now hard-fails.
+- **DeepSeek Harness + Groq fails silently** — empty response after ~1 s, no error, no log. NVIDIA's endpoint works. "OpenAI-compatible" describes request shape, not harness compatibility.
+- **dsh has no documented headless CLI.** Use the Node API; the model belongs in the *plugin config*, not in `run()` (where it is silently ignored).
+- **Some endpoints buffer the whole response** then flush it, which drives `total − ttft` toward zero and yields absurd throughput figures. The harness detects this and falls back to end-to-end timing.
+
+## What it measures
+
+- **TTFT** (time to first token) and **generation throughput**, from each API's own `usage` counts.
+- **Shootout mode**: the same open-weight model across every platform that hosts it — the only fair cross-platform comparison, since platforms host different model mixes.
+- **Capability tasks**: code, JSON, long-context, Chinese.
+- **Agent tasks** via DeepSeek Harness, graded on filesystem state.
+
+## Run it yourself
+
+1. Add each provider's key as an **Actions secret** (`GROQ_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `OPENROUTER_API_KEY`, `MISTRAL_API_KEY`, `GLM_API_KEY`, `GH_MODELS_TOKEN`, …).
+2. Run the **AI API Benchmark** workflow (Actions → Run workflow). Results land in the job summary and as an artifact.
+3. For agent tests, run the **DSH Agent Test** workflow.
+
+Locally:
+
+```bash
+python automation/ai_api_benchmark.py                            # every provider with a key
+python automation/ai_api_benchmark.py groq nvidia                # specific ones
+python automation/ai_api_benchmark.py --shootout gpt-oss-120b    # same model, many platforms
+python automation/ai_api_benchmark.py --list                     # what's configured
+```
+
+Keys come from environment variables or a local `ai-api-keys.txt` (gitignored). Set `PROXY=http://127.0.0.1:7890` if you need one.
+
+> Agent tests execute shell commands generated by a model. They belong in a disposable container — which is why the workflow runs them in Actions, not on your laptop. See DeepSeek Harness's [SAFETY.md](https://github.com/deepseek-ai/deepseek-harness/blob/main/SAFETY.md).
+
+## Related reading
+
+- [Free AI APIs tested: which are still free (and fastest)](https://toolfreebie.com/free-ai-api-speed-test/)
+- [We gave free AI models real agent jobs](https://toolfreebie.com/free-ai-models-agent-test/)
+- [NVIDIA NIM free API: 83 models tested](https://toolfreebie.com/nvidia-nim-free-api/)
+- [DeepSeek Harness review](https://toolfreebie.com/deepseek-harness-review/)
+- [Groq free API tested](https://toolfreebie.com/groq-fastest-free-ai-api/)
 
 MIT.
