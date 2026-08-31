@@ -17,14 +17,16 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **565.9** |
-| groq | `groq/compound-mini` | **523.2** |
-| groq | `qwen/qwen3.6-27b` | **517.1** |
-| groq | `qwen/qwen3.8-27b` | **461.3** |
+| groq | `openai/gpt-oss-120b` | **526.7** |
+| mistral | `mistral-small-latest` | **166.6** |
+| gemini | `gemini-3.6-flash` | **141.0** |
+| openrouter | `nvidia/nemotron-3-super-120b-a12b:free` | **38.1** |
+| nvidia | `nvidia/nemotron-3-super-120b-a12b` | **33.3** |
+| glm | `glm-4-flash` | **20.2** |
 
-Excluded as implausible (buffered responses inflate throughput):
+Providers that failed this run:
 
-- groq / `openai/gpt-oss-20b` — measured 2209.0 tok/s
+- **github** — HTTP 410: {"error":{"code":"github_models_retirement_brownout","message":"GitHub Models is temporarily unavail
 <!-- BENCHMARK_TABLE_END -->
 
 This table is regenerated automatically by the weekly run — see [`results/`](results/) for every dated snapshot. Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs; the ranking is stable, the absolute numbers are a band.
