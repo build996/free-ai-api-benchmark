@@ -59,14 +59,17 @@ def main():
     if len(sys.argv) < 2:
         sys.exit("need a task prompt")
     prompt = sys.argv[1]
-    custom_pid = write_custom_provider_settings()
+    # 不再写自定义 provider 的 settings.yaml —— 实测它会让原本能跑的配置失败。
+    # 保留函数供以后排查,但默认不调用。
 
     params = set(inspect.signature(DeepSeekHarness.__init__).parameters)
     print("DeepSeekHarness accepts:", sorted(p for p in params if p != "self"))
 
+    # 2026-08-31 实测:provider="deepseek-official" + DEEPSEEK_BASE_URL 环境变量
+    # 这条路是验证过能跑通的(NVIDIA 后端 44s 完成任务)。
+    # 自定义 provider(settings.yaml + benchgw)反而让两边都失败 —— 别再改回去。
     wanted = {
-        # 用上面注册的自定义 provider id;没注册成功才退回 deepseek-official
-        "provider": custom_pid or os.environ.get("DSH_PROVIDER", "deepseek-official"),
+        "provider": os.environ.get("DSH_PROVIDER", "deepseek-official"),
         "model": os.environ.get("DSH_MODEL", "deepseek-v4-flash"),
         # 显式传 key/base_url —— 别指望它一定会读环境变量
         "api_key": os.environ.get("DEEPSEEK_API_KEY", ""),
