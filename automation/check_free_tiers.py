@@ -39,6 +39,12 @@ PAGES = {
     "netlify":   ("https://www.netlify.com/pricing/", r"Free|Starter"),
     "modal":     ("https://modal.com/pricing",      r"Free|credit"),
     "qdrant":    ("https://qdrant.tech/pricing/",   r"Free"),
+    "cloudflare-workers": ("https://developers.cloudflare.com/workers-ai/platform/pricing/", None),
+    "huggingface": ("https://huggingface.co/pricing", None),
+    "firecrawl": ("https://www.firecrawl.dev/pricing", None),
+    "langfuse":  ("https://langfuse.com/pricing", None),
+    "appwrite":  ("https://appwrite.io/pricing", None),
+    "render-free": ("https://render.com/docs/free", None),
 }
 
 KEYWORDS = ("gb", "mb", "storage", "database", "million", "billion",
@@ -98,7 +104,7 @@ def main():
             print(f"  fetch failed: {type(e).__name__}: {e}\n")
             continue
 
-        m = re.search(anchor, txt, re.I)
+        m = re.search(anchor, txt, re.I) if anchor else None
         if m:
             print(" ", txt[m.start():m.start() + args.chars].strip(), "\n")
         else:

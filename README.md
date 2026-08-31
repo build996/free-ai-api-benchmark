@@ -97,6 +97,22 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 
 ---
 
+### Free-tier facts, re-read from the source
+
+Reviews rot when a provider quietly changes a limit. `check_free_tiers.py` pulls the numbers straight off each provider's pricing page so an article can be diffed against the source. Checked 2026-08-31:
+
+| Provider | Free tier as published |
+|---|---|
+| Render | 750 instance hrs/mo per workspace · spins down after **15 min idle** · Postgres **expires after 30 days** (+14-day grace) · cron and workers are **not** free-eligible |
+| Upstash | 256 MB · 10 GB/mo bandwidth · 500K commands/mo |
+| Neon | 100 projects · 0.5 GB storage each · 100 CU-hrs/mo |
+| Modal | $30/mo credit · 100 containers · 10 GPU concurrency |
+| Turso | **5 GB / 100 databases** — the widely-quoted 9 GB is the paid Developer tier |
+
+```bash
+python automation/check_free_tiers.py render upstash neon modal turso
+```
+
 ## Gotchas worth knowing
 
 - **Paid-tier numbers get quoted as free ones.** Turso's pricing page lists Free at 5 GB / 100 databases and the paid Developer tier at 9 GB — we (and plenty of other write-ups) had the 9 GB figure as the free allowance. Read the column header, not just the number.
