@@ -57,6 +57,15 @@ Turbo was 21% faster and produced a transcript one character different — no qu
 
 **Clip length changes the answer completely.** The same API and model measured **7.3×** on an 11-second clip and **160×** on a 4-minute one, because per-request overhead (handshake, upload, queueing) doesn't shrink with the audio. A realtime factor quoted without the clip length is meaningless — ours is measured on 4 minutes.
 
+### Text-to-speech
+
+Groq serves `canopylabs/orpheus-v1-english` on the same free key. Measured: **2.4 s to generate ~10.5 s of speech ≈ 4.4× realtime**, 24 kHz, six voices, no card.
+
+Two traps worth knowing:
+
+- **The model is gated behind manual terms acceptance.** A key that works for chat and Whisper returns `400 requires terms acceptance` for TTS until someone clicks through in the console — it cannot be done via the API, so it breaks automated setups.
+- **The WAV header reports `2147483647` frames** (int32 max, the placeholder for streamed audio of unknown length). Standard libraries then compute a duration of ~24.9 hours for a 10-second clip. Derive duration from file size instead: `(filesize - 44) / (channels * sampwidth) / framerate`.
+
 ### Can these models actually run an agent?
 
 Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), given real jobs (fix a broken script, tidy a folder, summarise CSVs) and graded by **inspecting the filesystem afterwards** — not by reading the model's own claim of success.
@@ -85,6 +94,7 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 - **Shootout mode**: the same open-weight model across every platform that hosts it — the only fair cross-platform comparison, since platforms host different model mixes.
 - **Capability tasks**: code, JSON, long-context, Chinese.
 - **Speech-to-text**: realtime factor on a fixed public-domain recording (`automation/bench_transcribe.py`).
+- **Text-to-speech**: generation speed vs produced audio length, with the header caveat above.
 - **Agent tasks** via DeepSeek Harness, graded on filesystem state.
 
 ## Run it yourself
