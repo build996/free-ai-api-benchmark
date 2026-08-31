@@ -20,13 +20,15 @@ on:
         required: true
         default: "NVIDIA"
       difficulty:
-        description: "easy=数文件(验证连通) / hard=修 bug(真正区分模型)"
+        description: "任务类型:easy=数文件 / hard=修bug / organize=整理文件 / summarize=读多文件写汇总"
         required: true
         default: "hard"
         type: choice
         options:
           - easy
           - hard
+          - organize
+          - summarize
 
 jobs:
   agent-test:
@@ -71,7 +73,17 @@ jobs:
           sed -i 's/^          //' /tmp/ws/stats.py
           echo "--- stats.py (should crash) ---"; cat /tmp/ws/stats.py
           python /tmp/ws/stats.py 2>&1 | tail -3 || true
-          ls -la /tmp/ws
+          # organize 任务用:一堆混杂文件,要按类型分目录
+          mkdir -p /tmp/ws/inbox
+          for f in report_q1.csv report_q2.csv photo1.jpg photo2.jpg notes.txt draft.txt budget.csv logo.png; do
+            echo "dummy content of $f" > "/tmp/ws/inbox/$f"
+          done
+          # summarize 任务用:三份结构相同的销售记录,要读全并汇总
+          mkdir -p /tmp/ws/sales
+          printf 'region,units\nnorth,120\nsouth,80\n'  > /tmp/ws/sales/jan.csv
+          printf 'region,units\nnorth,200\nsouth,150\n' > /tmp/ws/sales/feb.csv
+          printf 'region,units\nnorth,90\nsouth,60\n'   > /tmp/ws/sales/mar.csv
+          ls -la /tmp/ws /tmp/ws/inbox /tmp/ws/sales
 
       - name: Run agent task
         id: run
@@ -88,11 +100,16 @@ jobs:
           echo "backend: $DEEPSEEK_BASE_URL  model: $DSH_MODEL"
           echo "=== 已装 SDK 的真实签名(pip 版可能比仓库示例旧)==="
           python -c "import inspect;from deepseek_harness import DeepSeekHarness as H;print('DeepSeekHarness:',inspect.signature(H.__init__))" 2>&1 | tee /tmp/sig.txt || true
-          if [ "${{ github.event.inputs.difficulty }}" = "easy" ]; then
-            TASK="Create a file called result.txt containing the number of .md files in the workspace, then read it back and tell me the number."
-          else
-            TASK="The script stats.py in this directory crashes when you run it. Run it, read the error, fix the bugs in stats.py, and run it again until it completes successfully and prints both averages. Handle the empty-list case sensibly instead of crashing."
-          fi
+          case "${{ github.event.inputs.difficulty }}" in
+            easy)
+              TASK="Create a file called result.txt containing the number of .md files in the workspace, then read it back and tell me the number." ;;
+            hard)
+              TASK="The script stats.py in this directory crashes when you run it. Run it, read the error, fix the bugs in stats.py, and run it again until it completes successfully and prints both averages. Handle the empty-list case sensibly instead of crashing." ;;
+            organize)
+              TASK="The inbox/ directory has mixed files. Sort every file in inbox/ into subfolders by type: put .csv files in inbox/data/, image files (.jpg, .png) in inbox/images/, and .txt files in inbox/text/. Move them, do not copy. Then list what ended up in each folder." ;;
+            summarize)
+              TASK="The sales/ directory has three monthly CSV files with region and units columns. Read all three, add up the total units for each region across all months, and write a file called sales/summary.txt containing one line per region in the format 'region: total'. Then tell me which region sold more." ;;
+          esac
           echo "TASK: $TASK"
           START=$(date +%s)
           set +e
@@ -105,7 +122,34 @@ jobs:
       - name: Inspect result and session log
         if: always()
         run: |
-          if [ "${{ github.event.inputs.difficulty }}" = "easy" ]; then
+          if [ "${{ github.event.inputs.difficulty }}" = "organize" ]; then
+            echo "=== organize:文件应被移动到对应子目录 ==="
+            find /tmp/ws/inbox -type f | sort
+            D=$(ls /tmp/ws/inbox/data/*.csv 2>/dev/null | wc -l)
+            I=$(ls /tmp/ws/inbox/images/*.jpg /tmp/ws/inbox/images/*.png 2>/dev/null | wc -l)
+            T=$(ls /tmp/ws/inbox/text/*.txt 2>/dev/null | wc -l)
+            LEFT=$(ls /tmp/ws/inbox/*.* 2>/dev/null | wc -l)
+            echo "data=$D(应3) images=$I(应3) text=$T(应2) 根目录残留=$LEFT(应0)"
+            if [ "$D" = "3" ] && [ "$I" = "3" ] && [ "$T" = "2" ] && [ "$LEFT" = "0" ]; then
+              echo "VERDICT: PASS (all files sorted correctly)"
+            elif [ "$D" -gt 0 ] || [ "$I" -gt 0 ] || [ "$T" -gt 0 ]; then
+              echo "VERDICT: PARTIAL (moved some, not all correct)"
+            else
+              echo "VERDICT: FAIL (nothing sorted)"
+            fi
+          elif [ "${{ github.event.inputs.difficulty }}" = "summarize" ]; then
+            echo "=== summarize:summary.txt 应含 north:410 south:290 ==="
+            if [ -f /tmp/ws/sales/summary.txt ]; then
+              cat /tmp/ws/sales/summary.txt
+              if grep -qi "410" /tmp/ws/sales/summary.txt && grep -qi "290" /tmp/ws/sales/summary.txt; then
+                echo "VERDICT: PASS (both totals correct)"
+              else
+                echo "VERDICT: PARTIAL (file written but numbers wrong)"
+              fi
+            else
+              echo "VERDICT: FAIL (no summary.txt)"
+            fi
+          elif [ "${{ github.event.inputs.difficulty }}" = "easy" ]; then
             echo "=== easy:result.txt 应存在且含 3 ==="
             if [ -f /tmp/ws/result.txt ]; then
               echo "result.txt EXISTS:"; cat /tmp/ws/result.txt
