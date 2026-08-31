@@ -99,6 +99,7 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 
 ## Gotchas worth knowing
 
+- **Paid-tier numbers get quoted as free ones.** Turso's pricing page lists Free at 5 GB / 100 databases and the paid Developer tier at 9 GB — we (and plenty of other write-ups) had the 9 GB figure as the free allowance. Read the column header, not just the number.
 - **`meta/llama-3.3-70b-instruct` is gone from NVIDIA NIM.** Nearly every NIM tutorial online still opens with it. It now hard-fails.
 - **DeepSeek Harness + Groq fails silently** — empty response after ~1 s, no error, no log. NVIDIA's endpoint works. "OpenAI-compatible" describes request shape, not harness compatibility.
 - **dsh has no documented headless CLI.** Use the Node API; the model belongs in the *plugin config*, not in `run()` (where it is silently ignored).
@@ -112,6 +113,7 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 - **Speech-to-text**: realtime factor on a fixed public-domain recording (`automation/bench_transcribe.py`).
 - **Text-to-speech**: generation speed vs produced audio length, with the header caveat above.
 - **Project health**: last commit / release / archived state for the open-source tools we recommend (`automation/check_project_health.py`).
+- **Free-tier drift**: pulls the limits straight off providers' pricing pages so articles can be checked against the source (`automation/check_free_tiers.py`).
 - **Agent tasks** via DeepSeek Harness, graded on filesystem state.
 
 ## Run it yourself
