@@ -44,6 +44,19 @@ This table is regenerated automatically by the weekly run — see [`results/`](r
 | **Together** | ❌ Read-only until you deposit |
 | **Cerebras** | ❌ Card required |
 
+### Speech-to-text
+
+Transcription speed is best read as a **realtime factor** — seconds of audio handled per second of wall clock.
+
+| Model (Groq free tier) | 4 min of audio | Realtime | Transcript |
+|---|---|---|---|
+| `whisper-large-v3-turbo` | **1.53 s** | **160×** | 2,081 chars |
+| `whisper-large-v3` | 1.85 s | 132× | 2,082 chars |
+
+Turbo was 21% faster and produced a transcript one character different — no quality trade-off on this sample.
+
+**Clip length changes the answer completely.** The same API and model measured **7.3×** on an 11-second clip and **160×** on a 4-minute one, because per-request overhead (handshake, upload, queueing) doesn't shrink with the audio. A realtime factor quoted without the clip length is meaningless — ours is measured on 4 minutes.
+
 ### Can these models actually run an agent?
 
 Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), given real jobs (fix a broken script, tidy a folder, summarise CSVs) and graded by **inspecting the filesystem afterwards** — not by reading the model's own claim of success.
@@ -71,6 +84,7 @@ Same models, driven through [DeepSeek Harness](https://github.com/deepseek-ai/de
 - **TTFT** (time to first token) and **generation throughput**, from each API's own `usage` counts.
 - **Shootout mode**: the same open-weight model across every platform that hosts it — the only fair cross-platform comparison, since platforms host different model mixes.
 - **Capability tasks**: code, JSON, long-context, Chinese.
+- **Speech-to-text**: realtime factor on a fixed public-domain recording (`automation/bench_transcribe.py`).
 - **Agent tasks** via DeepSeek Harness, graded on filesystem state.
 
 ## Run it yourself
