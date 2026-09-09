@@ -65,6 +65,17 @@ PROVIDERS = {
 
 # 同模型跨平台"对决":一个开源模型 → 各平台上它的 model id(命名各不同)。
 # 只测有 key 的平台。id 需逐平台核实(有的可能已更名/下架,跑出来会报错就换)。
+# 已确认不再免费 / 已下线 —— 默认不测,别让 CI 每周去敲死接口。
+# 但不从 PROVIDERS 删:显式点名仍可重测(万一复活),而"曾经免费、现在不是"
+# 本身就是这个站要写的内容。每条记死因 + 确认日期。
+RETIRED = {
+    # 注意:死的是 DeepSeek 自家 API,不是 DeepSeek 模型本身。别家托管的 ds 模型要照测。
+    # 实测 2026-09-09:OpenRouter 431 个模型里 18 个免费,DeepSeek 一个都没有了。
+    "deepseek":  {"since": "2026-08-31", "why": "402 Insufficient Balance —— 自家 API 免费额度取消;别家托管的 ds 模型另算"},
+    "sambanova": {"since": "2026-08-31", "why": "402 balance_units:0 —— 必须绑付款方式"},
+    "github":    {"since": "2026-07-30", "why": "410 —— GitHub Models 已于 2026-07-30 正式下线"},
+}
+
 SHOOTOUTS = {
     # nemotron-3-super-120b —— NVIDIA 直连 vs OpenRouter,同一个模型(免费层塌到现在少数还能同款横比的)
     "nemotron-super-120b": {
@@ -190,6 +201,7 @@ def _request(url, key, model, prompt, stream):
 
     t0 = time.perf_counter()
     ttft, chunks, text, usage = None, 0, [], None
+    reasoning = []   # 推理模型把内容放这儿,只读 content 会误判成"空响应"
     with urllib.request.urlopen(req, timeout=180) as resp:  # NVIDIA 大模型冷启动可能很慢
         if stream:
             for raw in resp:
@@ -205,17 +217,21 @@ def _request(url, key, model, prompt, stream):
                     continue
                 if obj.get("usage"):
                     usage = obj["usage"]
-                delta = (obj.get("choices") or [{}])[0].get("delta", {}).get("content")
-                if delta:
+                d = (obj.get("choices") or [{}])[0].get("delta", {})
+                piece = d.get("content") or d.get("reasoning")
+                if piece:
                     if ttft is None:
                         ttft = time.perf_counter() - t0
                     chunks += 1
-                    text.append(delta)
+                    (text if d.get("content") else reasoning).append(piece)
         else:
             obj = json.loads(resp.read().decode("utf-8", "replace"))
             usage = obj.get("usage")
-            text.append((obj.get("choices") or [{}])[0].get("message", {}).get("content", "") or "")
-    return ttft, time.perf_counter() - t0, "".join(text), usage, chunks
+            msg = (obj.get("choices") or [{}])[0].get("message", {})
+            text.append(msg.get("content", "") or "")
+            if msg.get("reasoning"):
+                reasoning.append(msg["reasoning"])
+    return ttft, time.perf_counter() - t0, "".join(text), usage, chunks, "".join(reasoning)
 
 
 def _bench_one_raw(name, cfg, prompt, model=None):
@@ -227,12 +243,12 @@ def _bench_one_raw(name, cfg, prompt, model=None):
 
     streamed = True
     try:
-        ttft, total, out, usage, chunks = _request(url, key, model, prompt, stream=True)
+        ttft, total, out, usage, chunks, think = _request(url, key, model, prompt, stream=True)
     except urllib.error.HTTPError as e:
         return {"provider": name, "model": model, "error": f"HTTP {e.code}: {e.read().decode('utf-8','replace')[:300]}"}
     except Exception:  # 流式失败(有些代理/节点掐 SSE)→ 非流式兜底
         try:
-            ttft, total, out, usage, chunks = _request(url, key, model, prompt, stream=False)
+            ttft, total, out, usage, chunks, think = _request(url, key, model, prompt, stream=False)
             streamed = False
         except urllib.error.HTTPError as e:
             return {"provider": name, "model": model, "error": f"HTTP {e.code}: {e.read().decode('utf-8','replace')[:300]}"}
@@ -240,7 +256,8 @@ def _bench_one_raw(name, cfg, prompt, model=None):
             return {"provider": name, "model": model, "error": f"{type(e).__name__}: {e}"}
 
     out_tokens = (usage or {}).get("completion_tokens") or max(chunks, len(out) // 4)
-    if out_tokens == 0 or not out.strip():
+    reasoning_only = bool(think.strip()) and not out.strip()
+    if out_tokens == 0 or (not out.strip() and not reasoning_only):
         return {"provider": name, "model": model,
                 "error": "empty response (no tokens returned)"}
 
@@ -258,6 +275,8 @@ def _bench_one_raw(name, cfg, prompt, model=None):
         "total_s": round(total, 3),
         "out_tokens": out_tokens,
         "tokens_from_usage": bool(usage),
+        "reasoning_only": reasoning_only,   # 有输出但全是思维链,没给出最终答案
+        "reasoning_chars": len(think),
         "streamed": streamed and not buffered,
         "buffered": buffered,
         "gen_tokens_per_s": round(gen_tps, 1),
@@ -320,6 +339,24 @@ def record_dataset(rows, mode):
     print(f"数据集 +{len(keep)} 条 -> data/{DATASET.name};"
           f"latest 现有 {len(latest)} 个 provider/model 组合")
 
+
+def openrouter_free_models(limit=20):
+    """现拉 OpenRouter 的免费模型清单 —— 手工维护的清单一定会过期。
+
+    实测 2026-09-09:431 个模型里只有 18 个 :free,而 harness 里写死的 4 个
+    已经死了 2 个(404 "改用付费版")。让它自己去问,表就不会烂在那儿。
+    """
+    try:
+        req = urllib.request.Request("https://openrouter.ai/api/v1/models",
+                                     headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.load(resp)["data"]
+    except Exception as e:  # noqa: BLE001
+        print(f"  (拉取 OpenRouter 模型列表失败:{type(e).__name__},退回写死的清单)")
+        return PROVIDER_MODELS["openrouter"]
+    ids = [m["id"] for m in data if m["id"].endswith(":free")]
+    print(f"  (OpenRouter 现有 {len(data)} 个模型,其中 {len(ids)} 个免费,测前 {min(limit, len(ids))} 个)")
+    return ids[:limit]
 
 def run_capability(spec):
     """能力测试:一个平台(或指定模型)跑 4 个可判定的任务,报通过/失败 + 真实输出。"""
@@ -404,7 +441,8 @@ def main():
         prov = args.models
         if prov not in PROVIDER_MODELS:
             sys.exit(f"没配置 {prov} 的模型列表。有:{list(PROVIDER_MODELS)}")
-        pairs = [(prov, m) for m in PROVIDER_MODELS[prov]]
+        models = openrouter_free_models() if prov == "openrouter" else PROVIDER_MODELS[prov]
+        pairs = [(prov, m) for m in models]
         print(f"=== {prov} 平台内多模型实测(每个模型跑同一 prompt)===")
     elif args.shootout:
         so = SHOOTOUTS.get(args.shootout)
@@ -413,7 +451,10 @@ def main():
         pairs = [(p, m) for p, m in so.items() if p in PROVIDERS]
         print(f"=== 对决:{args.shootout}(同模型跨平台,只测有 key 的)===")
     else:
-        targets = args.providers or list(PROVIDERS)
+        targets = args.providers or [p for p in PROVIDERS if p not in RETIRED]
+        if not args.providers and RETIRED:
+            for rp, info in RETIRED.items():
+                print(f"  {rp:<10} 跳过(已退役 {info['since']}:{info['why']})")
         unknown = [t for t in targets if t not in PROVIDERS]
         if unknown:
             sys.exit(f"未知 provider: {unknown}。用 --list 看全部。")
