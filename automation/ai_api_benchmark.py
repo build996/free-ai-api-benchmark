@@ -30,12 +30,19 @@ import sys
 import time
 import urllib.request
 import urllib.error
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 # 两个都认:普通 .txt(好打开)优先,老的隐藏 dotfile 也读
 KEYS_FILES = [ROOT / "ai-api-keys.txt", ROOT / ".ai-api-keys"]
 OUT = ROOT / "ai_benchmark_results.json"
+# 累加式数据集:每次跑都往里追加,不覆盖。这是做成可筛表格/工具的数据源。
+DATA_DIR = ROOT / "data"
+DATASET = DATA_DIR / "benchmarks.jsonl"          # append-only,一行一次测量
+LATEST = DATA_DIR / "benchmarks_latest.json"     # 每个 (provider, model) 只留最新一条
+# 超过这个吞吐几乎必是"整段缓冲后一次吐完"的假高值,标记出来,别拿去发布。
+SANITY_CAP = 1500.0
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -53,6 +60,7 @@ PROVIDERS = {
     "mistral":   {"base": "https://api.mistral.ai/v1",                        "model": "mistral-small-latest",    "key_env": "MISTRAL_API_KEY"},
     "glm":       {"base": "https://open.bigmodel.cn/api/paas/v4",             "model": "glm-4-flash",             "key_env": "GLM_API_KEY"},
     "nvidia":    {"base": "https://integrate.api.nvidia.com/v1",              "model": "nvidia/nemotron-3-super-120b-a12b", "key_env": "NVIDIA_API_KEY"},  # nemotron-70b 账号无权限;super-120b 实测可用(2026-08-31)
+    "sambanova": {"base": "https://api.sambanova.ai/v1",                    "model": "Meta-Llama-3.3-70B-Instruct", "key_env": "SAMBANOVA_API_KEY"},  # key 和 CI secret 早就有,此前漏了这一行
 }
 
 # 同模型跨平台"对决":一个开源模型 → 各平台上它的 model id(命名各不同)。
@@ -210,7 +218,7 @@ def _request(url, key, model, prompt, stream):
     return ttft, time.perf_counter() - t0, "".join(text), usage, chunks
 
 
-def bench_one(name, cfg, prompt, model=None):
+def _bench_one_raw(name, cfg, prompt, model=None):
     key = os.environ.get(cfg["key_env"], "").strip()
     if not key:
         return {"provider": name, "skipped": f"no {cfg['key_env']}"}
@@ -255,6 +263,62 @@ def bench_one(name, cfg, prompt, model=None):
         "gen_tokens_per_s": round(gen_tps, 1),
         "output": out.strip(),
     }
+
+
+def now_iso():
+    """UTC 时间戳。每条测量都带,别再让日期只活在文件名里。"""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def bench_one(name, cfg, prompt, model=None):
+    """跑一次并盖上实测时间戳 —— 日期戳是这份数据唯一的护城河,不能漏。"""
+    r = _bench_one_raw(name, cfg, prompt, model=model)
+    r["measured_at"] = now_iso()
+    return r
+
+
+def record_dataset(rows, mode):
+    """把这一轮结果追加进累加式数据集,并重建 latest 视图。
+
+    OUT 那个文件永远只是"最后一次跑",会被下一次覆盖(CI 依赖它,保持原样)。
+    真正给表格/工具用的是这里:JSONL 只增不删,latest 每个模型留最新一条。
+    """
+    keep = []
+    for r in rows:
+        if r.get("skipped"):          # 没 key,不是测量结果
+            continue
+        row = {k: v for k, v in r.items() if k != "output"}   # 正文太长,不进数据集
+        row["mode"] = mode
+        tps = row.get("gen_tokens_per_s")
+        if tps and tps > SANITY_CAP:
+            row["suspect"] = True     # 疑似伪流式,别拿去发布
+        keep.append(row)
+    if not keep:
+        return
+
+    DATA_DIR.mkdir(exist_ok=True)
+    with DATASET.open("a", encoding="utf-8") as f:
+        for row in keep:
+            print(json.dumps(row, ensure_ascii=False), file=f)
+
+    # 重建 latest:全量读 JSONL,按 (provider, model) 取 measured_at 最大的一条
+    best = {}
+    for line in DATASET.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        k = (row.get("provider"), row.get("model"))
+        if k not in best or (row.get("measured_at") or "") > (best[k].get("measured_at") or ""):
+            best[k] = row
+    latest = sorted(best.values(),
+                    key=lambda r: (r.get("gen_tokens_per_s") or -1), reverse=True)
+    LATEST.write_text(json.dumps(latest, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"数据集 +{len(keep)} 条 -> data/{DATASET.name};"
+          f"latest 现有 {len(latest)} 个 provider/model 组合")
 
 
 def run_capability(spec):
@@ -302,6 +366,10 @@ def run_capability(spec):
         print(f"| `{r['model']}` | {c('json')} | {c('code')} | {c('chinese')} | {c('needle')} | {score} |")
     print("\n任务:①只输出合法 JSON(指令遵循)②写可用的 Python 函数 ③纯中文回答 ④从 120 行噪声里找出指定值。")
     print("⚠️ = 请求没跑成(超时/报错),不代表模型能力不行。")
+    stamp = now_iso()
+    for row in table:
+        row["measured_at"] = stamp
+        row["provider"] = prov
     OUT.with_name("ai_capability_results.json").write_text(
         json.dumps(table, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"原始输出已存:ai_capability_results.json")
@@ -383,6 +451,8 @@ def main():
 
     OUT.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n原始结果(含真实输出)已存:{OUT.name}")
+    mode = ("models:" + args.models if args.models else ("shootout:" + args.shootout if args.shootout else "sweep"))
+    record_dataset(results, mode)
 
 
 if __name__ == "__main__":
