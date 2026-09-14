@@ -13,20 +13,19 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 ### Generation throughput
 
 <!-- BENCHMARK_TABLE_START -->
-*Last run: 2026-09-07 (UTC), from a US GitHub Actions runner.*
+*Last run: 2026-09-14 (UTC), from a US GitHub Actions runner.*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **522.3** |
-| nvidia | `nvidia/nemotron-3-super-120b-a12b` | **108.9** |
-| openrouter | `nvidia/nemotron-3-super-120b-a12b:free` | **106.0** |
-| glm | `glm-4-flash` | **24.3** |
+| groq | `openai/gpt-oss-120b` | **477.2** |
+| gemini | `gemini-3.6-flash` | **225.4** |
+| openrouter | `nvidia/nemotron-3-super-120b-a12b:free` | **38.7** |
+| glm | `glm-4-flash` | **14.6** |
 
 Providers that failed this run:
 
-- **gemini** — HTTP 503: [{
-- **github** — HTTP 410: {"error":{"code":"github_models_retirement_brownout","message":"GitHub Models is temporarily unavail
 - **mistral** — HTTP 429: {"object":"error","message":"Rate limit exceeded","type":"rate_limited","param":null,"code":"1300","
+- **nvidia** — empty response (no tokens returned)
 <!-- BENCHMARK_TABLE_END -->
 
 This table is regenerated automatically by the weekly run — see [`results/`](results/) for every dated snapshot. Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs; the ranking is stable, the absolute numbers are a band.
