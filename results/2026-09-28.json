@@ -1,0 +1,56 @@
+[
+  {
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "ttft_s": 0.197,
+    "total_s": 1.539,
+    "out_tokens": 548,
+    "tokens_from_usage": true,
+    "reasoning_only": false,
+    "reasoning_chars": 187,
+    "streamed": true,
+    "buffered": false,
+    "gen_tokens_per_s": 408.5,
+    "output": "**The HTTP request/response cycle (≈250 words)**  \n\n1. **Client initiates a request** – A web browser (or any HTTP client) builds an HTTP request message. It starts with a request line (e.g., `GET /index.html HTTP/1.1`), followed by headers (Host, User‑Agent, Accept, etc.) and, for methods like POST, an optional body containing form data or JSON. The client then opens a TCP connection to the server’s IP address on port 80 (HTTP) or 443 (HTTPS) and sends the request.\n\n2. **Server receives and processes** – The web server (Apache, Nginx, IIS, etc.) parses the request line and headers, determines the target resource, and may invoke application logic (PHP, Node.js, Python, etc.). It checks routing, authentication, and any business rules, then prepares a response.\n\n3. **Server sends a response** – The response begins with a status line (`HTTP/1.1 200 OK`), followed by response headers (Content-Type, Content-Length, Set-Cookie, etc.) and an optional body containing HTML, JSON, an image, etc. The server writes this data back over the same TCP connection. After sending, it may keep the connection alive for reuse (keep‑alive) or close it.\n\n4. **Client processes the response** – The browser reads the status code, headers, and body. If the status is 2xx, it renders the content; for redirects (3xx) it may issue a new request; for errors (4xx/5xx) it typically shows an error page. Finally, the client may cache the response according to caching headers.\n\n**Key status codes**\n\n- **200 OK** – The request succeeded and the server is returning the requested resource in the response body. This is the standard “everything worked” code for GET, POST, etc.\n\n- **404 Not Found** – The server could not locate the requested resource. The URL is syntactically valid, but no file or route matches it. Browsers usually display a “Page not found” page.\n\n- **500 Internal Server Error** – The server encountered an unexpected condition that prevented it from fulfilling the request. It indicates a problem on the server side (e.g., uncaught exception, misconfiguration) rather than a client mistake.",
+    "measured_at": "2026-09-28T12:45:20+00:00"
+  },
+  {
+    "provider": "gemini",
+    "model": "gemini-3.6-flash",
+    "error": "HTTP 503: [{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+    "measured_at": "2026-09-28T12:45:25+00:00"
+  },
+  {
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "error": "empty response (no tokens returned)",
+    "measured_at": "2026-09-28T12:45:26+00:00"
+  },
+  {
+    "provider": "mistral",
+    "model": "mistral-small-latest",
+    "error": "HTTP 429: {\"object\":\"error\",\"message\":\"Rate limit exceeded\",\"type\":\"rate_limited\",\"param\":null,\"code\":\"1300\",\"raw_status_code\":429}",
+    "measured_at": "2026-09-28T12:45:26+00:00"
+  },
+  {
+    "provider": "glm",
+    "model": "glm-4-flash",
+    "ttft_s": 1.239,
+    "total_s": 22.701,
+    "out_tokens": 339,
+    "tokens_from_usage": true,
+    "reasoning_only": false,
+    "reasoning_chars": 0,
+    "streamed": true,
+    "buffered": false,
+    "gen_tokens_per_s": 15.8,
+    "output": "The HTTP request/response cycle is the fundamental interaction between a client (like a web browser) and a server. It typically involves the following steps:\n\n1. **Client sends a request**: The client initiates the cycle by sending an HTTP request to the server. This request includes a method (GET, POST, etc.), the URL of the resource, and headers containing additional information.\n\n2. **Server processes the request**: The server receives the request, parses the method, URL, and headers. It then processes the request, which may involve retrieving data from a database or executing a server-side script.\n\n3. **Server sends a response**: After processing the request, the server sends an HTTP response back to the client. This response includes a status code, headers, and the requested resource (HTML, image, etc.).\n\n4. **Client receives the response**: The client receives the response and displays the content to the user. If the response is a redirect, the client may send a new request to the new URL.\n\nHTTP status codes provide information about the result of the request. Here are three common status codes:\n\n- **200 OK**: This indicates that the request was successful, and the server returned the requested resource. It's the most common status code and signifies a successful response.\n\n- **404 Not Found**: This means that the server could not find the requested resource. It's often used when a user tries to access a page that doesn't exist on the server.\n\n- **500 Internal Server Error**: This indicates that the server encountered an unexpected condition that prevented it from fulfilling the request. It's a catch-all error message and doesn't provide specific details about the issue.",
+    "measured_at": "2026-09-28T12:45:49+00:00"
+  },
+  {
+    "provider": "nvidia",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "error": "empty response (no tokens returned)",
+    "measured_at": "2026-09-28T12:45:49+00:00"
+  }
+]
