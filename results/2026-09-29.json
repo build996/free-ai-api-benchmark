@@ -1,0 +1,8 @@
+[
+  {
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "error": "HTTP 503: [{\n  \"error\": {\n    \"code\": 503,\n    \"message\": \"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.\",\n    \"status\": \"UNAVAILABLE\"\n  }\n}\n]",
+    "measured_at": "2026-09-29T15:10:28+00:00"
+  }
+]
