@@ -13,18 +13,18 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 ### Generation throughput
 
 <!-- BENCHMARK_TABLE_START -->
-*Last run: 2026-10-05 (UTC), from a US GitHub Actions runner.*
+*Last run: 2026-10-12 (UTC), from a US GitHub Actions runner.*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **465.1** |
-| nvidia | `nvidia/nemotron-3-super-120b-a12b` | **240.4** |
-| openrouter | `nvidia/nemotron-3-super-120b-a12b:free` | **157.0** |
-| glm | `glm-4-flash` | **20.4** |
+| groq | `openai/gpt-oss-120b` | **471.5** |
+| gemini | `gemini-3.6-flash` | **212.7** |
+| nvidia | `nvidia/nemotron-3-super-120b-a12b` | **98.2** |
+| openrouter | `nvidia/nemotron-3-super-120b-a12b:free` | **74.6** |
+| glm | `glm-4-flash` | **11.8** |
 
 Providers that failed this run:
 
-- **gemini** — HTTP 503: [{
 - **mistral** — HTTP 429: {"object":"error","message":"Rate limit exceeded","type":"rate_limited","param":null,"code":"1300","
 <!-- BENCHMARK_TABLE_END -->
 
