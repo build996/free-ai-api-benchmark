@@ -13,17 +13,17 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 ### Generation throughput
 
 <!-- BENCHMARK_TABLE_START -->
-*Last run: 2026-10-26 (UTC), from a US GitHub Actions runner.*
+*Last run: 2026-11-02 (UTC), from a US GitHub Actions runner.*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **484.8** |
-| gemini | `gemini-3.6-flash` | **89.6** |
-| glm | `glm-4-flash` | **19.3** |
+| groq | `openai/gpt-oss-120b` | **480.5** |
+| gemini | `gemini-3.6-flash` | **208.7** |
+| glm | `glm-4-flash` | **34.8** |
 
 Providers that failed this run:
 
-- **openrouter** — HTTP 404: {"error":{"message":"Provider returned error","code":404,"metadata":{"raw":"{\"status\":404,\"title\
+- **openrouter** — HTTP 404: {"error":{"message":"This model is unavailable for free. The paid version is available now - use thi
 - **mistral** — HTTP 429: {"object":"error","message":"Rate limit exceeded","type":"rate_limited","param":null,"code":"1300","
 - **nvidia** — HTTP 404: {"status":404,"title":"Not Found","detail":"Function 'ac74040f-9fc9-4c5e-ac74-279ba5161d69': Not fou
 <!-- BENCHMARK_TABLE_END -->
