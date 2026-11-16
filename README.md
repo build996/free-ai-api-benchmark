@@ -13,19 +13,19 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 ### Generation throughput
 
 <!-- BENCHMARK_TABLE_START -->
-*Last run: 2026-11-09 (UTC), from a US GitHub Actions runner.*
+*Last run: 2026-11-16 (UTC), from a US GitHub Actions runner.*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **481.4** |
-| gemini | `gemini-3.6-flash` | **168.0** |
-| glm | `glm-4-flash` | **21.1** |
+| groq | `openai/gpt-oss-120b` | **477.0** |
+| gemini | `gemini-3.6-flash` | **220.7** |
+| glm | `glm-4-flash` | **25.0** |
 
 Providers that failed this run:
 
 - **openrouter** — HTTP 404: {"error":{"message":"This model is unavailable for free. The paid version is available now - use thi
 - **mistral** — HTTP 429: {"object":"error","message":"Rate limit exceeded","type":"rate_limited","param":null,"code":"1300","
-- **nvidia** — HTTP 404: {"status":404,"title":"Not Found","detail":"Function 'ac74040f-9fc9-4c5e-ac74-279ba5161d69': Not fou
+- **nvidia** — HTTP 410: {"type":"about:blank","title":"Gone","status":410,"detail":"The model 'nvidia/nemotron-3-super-120b-
 <!-- BENCHMARK_TABLE_END -->
 
 This table is regenerated automatically by the weekly run — see [`results/`](results/) for every dated snapshot. Throughput is generation-only (excludes time to first token) and uses each API's own `usage` token counts. Free-tier capacity is shared, so expect ±30% between runs; the ranking is stable, the absolute numbers are a band.
