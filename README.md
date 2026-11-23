@@ -13,13 +13,13 @@ Pairs with the hands-on reviews at **[toolfreebie.com](https://toolfreebie.com)*
 ### Generation throughput
 
 <!-- BENCHMARK_TABLE_START -->
-*Last run: 2026-11-16 (UTC), from a US GitHub Actions runner.*
+*Last run: 2026-11-23 (UTC), from a US GitHub Actions runner.*
 
 | Provider | Model | tokens/s |
 |---|---|---|
-| groq | `openai/gpt-oss-120b` | **477.0** |
-| gemini | `gemini-3.6-flash` | **220.7** |
-| glm | `glm-4-flash` | **25.0** |
+| groq | `openai/gpt-oss-120b` | **458.9** |
+| gemini | `gemini-3.6-flash` | **194.5** |
+| glm | `glm-4-flash` | **20.5** |
 
 Providers that failed this run:
 

@@ -1,0 +1,65 @@
+[
+  {
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "ttft_s": 0.267,
+    "total_s": 1.757,
+    "out_tokens": 684,
+    "tokens_from_usage": true,
+    "reasoning_only": false,
+    "reasoning_chars": 530,
+    "streamed": true,
+    "buffered": false,
+    "gen_tokens_per_s": 458.9,
+    "output": "**The HTTP request/response cycle (≈250 words)**  \n\n1. **Client preparation** – A browser (or any HTTP client) first resolves the target domain via DNS, then opens a TCP connection to the server’s IP address (usually on port 80 for HTTP or 443 for HTTPS).  \n\n2. **Request line** – The client sends a text line such as  \n   ```\n   GET /index.html HTTP/1.1\n   ```  \n   The method (`GET`, `POST`, etc.) tells the server what action to perform, the path identifies the resource, and the HTTP version indicates the protocol level.  \n\n3. **Headers** – One or more header fields follow, each on its own line, e.g., `Host: example.com`, `User-Agent: …`, `Accept: …`. Headers convey metadata like cookies, content types, and caching directives.  \n\n4. **Optional body** – For methods like `POST` or `PUT`, a payload (JSON, form data, etc.) is sent after a blank line that terminates the header section.  \n\n5. **Server processing** – The server parses the request, maps the path to a file, script, or service, runs any necessary logic, and decides what response to generate.  \n\n6. **Response line** – The server replies with a status line, e.g.,  \n   ```\n   HTTP/1.1 200 OK\n   ```  \n   The three‑digit status code signals the outcome; the accompanying phrase is human‑readable.  \n\n7. **Response headers** – Similar to request headers, they describe the payload (`Content-Type`, `Content-Length`, `Set-Cookie`, etc.).  \n\n8. **Response body** – If applicable, the server sends the requested resource (HTML, JSON, an image, etc.).  \n\n9. **Connection handling** – Depending on the `Connection` header, the TCP socket may be kept alive for further requests or closed.  \n\n**Key status codes**  \n\n- **200 OK** – The request succeeded; the server is returning the requested representation in the body.  \n- **404 Not Found** – The server could not locate a resource matching the request URI. It indicates a client‑side error: the URL is wrong or the resource has been removed.  \n- **500 Internal Server Error** – The server encountered an unexpected condition that prevented it from fulfilling the request. This signals a server‑side problem (e.g., a crashed script or misconfiguration).  \n\nThese codes belong to the 2xx (success), 4xx (client error), and 5xx (server error) families, guiding clients on how to react.",
+    "measured_at": "2026-11-23T17:13:32+00:00"
+  },
+  {
+    "provider": "gemini",
+    "model": "gemini-3.6-flash",
+    "ttft_s": 116.152,
+    "total_s": 117.966,
+    "out_tokens": 353,
+    "tokens_from_usage": true,
+    "reasoning_only": false,
+    "reasoning_chars": 0,
+    "streamed": true,
+    "buffered": false,
+    "gen_tokens_per_s": 194.5,
+    "output": "The HTTP (Hypertext Transfer Protocol) request/response cycle is the fundamental process powering communication on the web between a client (like a web browser) and a web server.\n\nThe cycle works in five main steps:\n\n1. **User Action:** A user initiates an action, such as clicking a link or typing a URL.\n2. **DNS & Connection:** The browser performs a DNS lookup to translate the domain name (e.g., `example.com`) into an IP address, then establishes a secure TCP connection with the server.\n3. **HTTP Request:** The client sends a structured request to the server. This includes an HTTP method (like `GET` to retrieve data or `POST` to submit it), the resource path, headers (metadata such as browser type), and an optional request body.\n4. **Server Processing:** The server receives the request, processes it (which may involve querying a database or executing backend code), and generates the appropriate output.\n5. **HTTP Response:** The server sends back a response containing headers, the requested data (like HTML, CSS, or JSON), and a three-digit status code. The browser then renders the content for the user.\n\n**HTTP Status Codes** tell the client the outcome of their request:\n\n* **200 OK:** Success. The server successfully processed the request and returned the expected data.\n* **404 Not Found:** Client Error. The server cannot find the requested resource. This usually happens if a link is broken or a URL is mistyped.\n* **500 Internal Server Error:** Server Error. The request was valid, but the server encountered an unexpected condition or bug that prevented it from fulfilling it.",
+    "measured_at": "2026-11-23T17:15:30+00:00"
+  },
+  {
+    "provider": "openrouter",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "error": "HTTP 404: {\"error\":{\"message\":\"This model is unavailable for free. The paid version is available now - use this slug instead: nvidia/nemotron-3-super-120b-a12b\",\"code\":404},\"user_id\":\"user_3IelCDcJBqtUG0NuzjeNBE93LuX\"}",
+    "measured_at": "2026-11-23T17:15:30+00:00"
+  },
+  {
+    "provider": "mistral",
+    "model": "mistral-small-latest",
+    "error": "HTTP 429: {\"object\":\"error\",\"message\":\"Rate limit exceeded\",\"type\":\"rate_limited\",\"param\":null,\"code\":\"1300\",\"raw_status_code\":429}",
+    "measured_at": "2026-11-23T17:15:31+00:00"
+  },
+  {
+    "provider": "glm",
+    "model": "glm-4-flash",
+    "ttft_s": 0.916,
+    "total_s": 16.603,
+    "out_tokens": 321,
+    "tokens_from_usage": true,
+    "reasoning_only": false,
+    "reasoning_chars": 0,
+    "streamed": true,
+    "buffered": false,
+    "gen_tokens_per_s": 20.5,
+    "output": "The HTTP request/response cycle is the fundamental interaction between a client (like a web browser) and a server. It typically involves the following steps:\n\n1. **Client sends a request**: The client initiates the cycle by sending an HTTP request to the server. This request includes a method (GET, POST, etc.), the URL of the resource, and headers that may contain additional information.\n\n2. **Server receives the request**: The server processes the request, which involves parsing the method, URL, and headers.\n\n3. **Server processes the request**: Depending on the method, the server may retrieve data, process a form submission, or perform other actions.\n\n4. **Server sends a response**: The server constructs an HTTP response, which includes a status code, headers, and a body. The status code indicates the result of the request.\n\n5. **Client receives the response**: The client receives the response and processes it. If the status code is 200 (OK), the client may display the content. If the status code is not 200, the client may handle the error accordingly.\n\nStatus codes provide information about the request's outcome:\n\n- **200 (OK)**: The request was successful, and the server returned the requested data.\n- **404 (Not Found)**: The requested resource could not be found on the server. This often occurs when a user tries to access a non-existent page.\n- **500 (Internal Server Error)**: The server encountered an unexpected condition that prevented it from fulfilling the request. This indicates a server-side issue, not a client error.",
+    "measured_at": "2026-11-23T17:15:47+00:00"
+  },
+  {
+    "provider": "nvidia",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "error": "HTTP 410: {\"type\":\"about:blank\",\"title\":\"Gone\",\"status\":410,\"detail\":\"The model 'nvidia/nemotron-3-super-120b-a12b' has reached its end of life on 2026-10-03T09:00:00Z and is no longer available.\"}\n",
+    "measured_at": "2026-11-23T17:15:47+00:00"
+  }
+]
